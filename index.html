@@ -83,7 +83,6 @@
         <a href="#process" class="hover:text-skybrand-600 transition-colors">공사프로세스</a>
       </nav>
       <div class="flex items-center gap-2">
-        <!-- 💡 우측 상단 관제실(강희성부장) 진입 버튼 추가 -->
         <button onclick="openPasswordModal()" class="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-1.5">
           <i data-lucide="shield" class="w-4 h-4 text-skybrand-600"></i><span>강희성부장</span>
         </button>
@@ -171,6 +170,7 @@
         <div>
           <div class="flex flex-wrap items-center gap-2 mb-2">
             <span class="px-3 py-1 bg-skybrand-100 text-skybrand-700 text-xs font-bold rounded-lg border">광진유한회사 기술시공본부</span>
+            <!-- 구글 드라이브 클라우드 상태 뱃지 -->
             <span id="sync-drive-badge" class="px-3 py-0.5 rounded-full text-[11px] font-black bg-emerald-100 text-emerald-700 border border-emerald-400">
               📁 Google Drive 실시간 클라우드 연동
             </span>
@@ -339,14 +339,14 @@
     <div class="bg-white rounded-3xl p-6 max-w-xl w-full border shadow-2xl overflow-y-auto max-h-[92vh]">
       <div class="flex justify-between items-center mb-4 pb-2 border-b"><h3 class="text-base font-black">새로운 앨범 생성</h3><button type="button" onclick="closeAddProjectAlbumModal()"><i data-lucide="x" class="w-5 h-5 text-slate-400"></i></button></div>
       <form onsubmit="handleProjectAlbumSubmit(event)" class="space-y-4 text-xs">
-        <div><label class="block font-bold mb-1">공사 건명</label><input type="text" id="album-title" required class="w-full bg-slate-50 border p-2 rounded-xl"></div>
+        <div><label class="block font-bold mb-1">공사 건명</label><input type="text" id="album-title" required class="w-full bg-slate-50 border p-2 rounded-xl" placeholder="이름을 입력하면 해당 이름의 구글 드라이브 폴더에 저장됩니다."></div>
         <div class="grid grid-cols-2 gap-3">
           <div><label class="block font-bold mb-1">분야</label><select id="album-category" class="w-full bg-slate-50 border p-2 rounded-xl font-bold"><option value="가정용">가정용</option><option value="상가/빌딩">상가/빌딩</option><option value="배관철거(지역 재개발)">배관철거(지역 재개발)</option><option value="유지보수">유지보수</option></select></div>
           <div><label class="block font-bold mb-1">완료일</label><input type="date" id="album-date" class="w-full bg-slate-50 border p-2 rounded-xl"></div>
         </div>
         <div><label class="block font-bold mb-1">설명</label><textarea id="album-desc" rows="2" class="w-full bg-slate-50 border p-2 rounded-xl"></textarea></div>
         <div>
-          <label class="block font-bold mb-1">사진 첨부 (구글드라이브 자동 저장)</label>
+          <label class="block font-bold mb-1">사진 첨부 (구글드라이브 폴더별 자동 저장)</label>
           <div id="btn-album-file-input" class="border-2 border-dashed border-skybrand-200 rounded-xl p-3 text-center bg-skybrand-50/50 cursor-pointer hover:bg-skybrand-100 transition-colors" onclick="document.getElementById('album-file-input').click()">
             <input type="file" id="album-file-input" accept="image/*" multiple onchange="handleAlbumFilesSelect(this)" class="hidden">
             <i id="icon-album-file" data-lucide="upload-cloud" class="w-6 h-6 text-skybrand-500 mx-auto mb-1"></i>
@@ -500,7 +500,6 @@
           </div>
         </div>
 
-        <!-- 첨부 서류 -->
         <div class="bg-slate-50 border border-slate-200 p-4 rounded-xl mt-4 space-y-4">
           <h4 class="font-bold text-slate-700 text-[11px]">■ 첨부 서류 (PDF/이미지 자동 변환 및 다중 저장)</h4>
           
@@ -758,7 +757,8 @@
       }
     }
 
-    async function uploadImageToDrive(fileOrBlob) {
+    // 💡 구글 드라이브 이미지 업로드 함수 (폴더명 포함 전달)
+    async function uploadImageToDrive(fileOrBlob, folderName = "") {
       return new Promise((resolve) => {
         const reader = new FileReader();
         reader.onload = async (e) => {
@@ -777,7 +777,16 @@
             
             if (GOOGLE_SCRIPT_URL && !GOOGLE_SCRIPT_URL.includes("여기에")) {
               try {
-                const res = await fetch(GOOGLE_SCRIPT_URL, { method: "POST", body: JSON.stringify({ action: "uploadImage", fileName: `photo_${Date.now()}.jpg`, contentType: "image/jpeg", base64Data: base64Data }) });
+                const res = await fetch(GOOGLE_SCRIPT_URL, { 
+                  method: "POST", 
+                  body: JSON.stringify({ 
+                    action: "uploadImage", 
+                    fileName: `photo_${Date.now()}.jpg`, 
+                    contentType: "image/jpeg", 
+                    base64Data: base64Data,
+                    folderName: folderName // 💡 추가: 지정된 폴더명 전송
+                  }) 
+                });
                 const resJson = await res.json();
                 if (resJson.status === "success") { resolve(resJson.url); return; }
               } catch (err) { resolve(base64Full); return; }
@@ -788,7 +797,16 @@
             const rawBase64 = e.target.result.split(',')[1];
             if (GOOGLE_SCRIPT_URL && !GOOGLE_SCRIPT_URL.includes("여기에")) {
               try {
-                const res = await fetch(GOOGLE_SCRIPT_URL, { method: "POST", body: JSON.stringify({ action: "uploadImage", fileName: fileOrBlob.name || `photo_${Date.now()}.jpg`, contentType: fileOrBlob.type || "application/octet-stream", base64Data: rawBase64 }) });
+                const res = await fetch(GOOGLE_SCRIPT_URL, { 
+                  method: "POST", 
+                  body: JSON.stringify({ 
+                    action: "uploadImage", 
+                    fileName: fileOrBlob.name || `photo_${Date.now()}.jpg`, 
+                    contentType: fileOrBlob.type || "application/octet-stream", 
+                    base64Data: rawBase64,
+                    folderName: folderName // 💡 추가: 지정된 폴더명 전송
+                  }) 
+                });
                 const resJson = await res.json();
                 if (resJson.status === "success") { resolve(resJson.url); return; }
               } catch (err) {}
@@ -821,23 +839,30 @@
       });
     }
 
+    // 현장 상세 1장 업로드
     async function uploadDocument(input, docType) {
       if (!input.files || input.files.length === 0) return;
       const file = input.files[0];
       const previewEl = document.getElementById(docType + '-preview');
       previewEl.innerHTML = `<div class="flex flex-col items-center justify-center text-skybrand-600"><i data-lucide="loader-2" class="w-6 h-6 animate-spin mb-1"></i><span class="text-xs font-bold">변환 및 업로드 중...</span></div>`;
       lucide.createIcons();
+      
+      const proj = appData.projects.find(p => p.id === activeDetailProjectId);
+      const targetFolder = proj ? proj.title : "기타_현장";
+
       try {
         let imageFile = file;
         if (file.type === "application/pdf" || file.name.toLowerCase().endsWith('.pdf')) { imageFile = await convertPdfToImage(file); }
-        const url = await uploadImageToDrive(imageFile);
-        const proj = appData.projects.find(p => p.id === activeDetailProjectId);
+        
+        const url = await uploadImageToDrive(imageFile, targetFolder);
+        
         if (proj && url) { proj[docType] = url; renderDocumentPreviews(); triggerAutoSync(); }
         else { renderDocumentPreviews(); }
       } catch (err) { renderDocumentPreviews(); }
       input.value = '';
     }
 
+    // 현장 상세 다중 업로드 (계약서)
     async function uploadMultiDocuments(input, listKey) {
       if (!input.files || input.files.length === 0) return;
       const proj = appData.projects.find(p => p.id === activeDetailProjectId); if (!proj) return;
@@ -846,6 +871,7 @@
       
       const total = input.files.length;
       let count = 0;
+      const targetFolder = proj.title ? proj.title : "기타_현장";
 
       previewEl.innerHTML = `<div class="col-span-full flex flex-col items-center justify-center text-skybrand-600 py-4"><i data-lucide="loader-2" class="w-6 h-6 animate-spin mb-1"></i><span id="multi-doc-progress" class="text-xs font-bold mt-2">서류 준비 중...</span></div>`;
       lucide.createIcons();
@@ -860,7 +886,7 @@
           if (file.type === "application/pdf" || file.name.toLowerCase().endsWith('.pdf')) { 
             imageFile = await convertPdfToImage(file); 
           }
-          const url = await uploadImageToDrive(imageFile); 
+          const url = await uploadImageToDrive(imageFile, targetFolder); 
           if (url) { proj[listKey].push(url); }
         } catch(e) {}
       }
@@ -868,6 +894,7 @@
       renderDocumentPreviews(); triggerAutoSync(); input.value = '';
     }
 
+    // 💡 구글 드라이브 403 오류 우회 헬퍼 함수
     function getDisplayUrl(url) {
       if (!url) return NO_IMAGE_PLACEHOLDER;
       if (url.includes('drive.google.com/uc') || url.includes('export=view')) {
@@ -910,7 +937,7 @@
     }
 
     function clearDocument(docType) {
-      if(confirm('이 첨부 서류를 삭제하시겠습니까? (구글 드라이브 원본도 영구 삭제됩니다)')) {
+      if(confirm('이 첨부 서류를 삭제하시겠습니까? (구글 드라이브 원본도 삭제됩니다)')) {
         const proj = appData.projects.find(p => p.id === activeDetailProjectId);
         if (proj && proj[docType]) { 
           deleteFileFromDrive(proj[docType]);
@@ -922,7 +949,7 @@
     }
     
     function removeMultiDoc(idx) {
-      if(confirm('이 계약서 사본을 삭제하시겠습니까? (구글 드라이브 원본도 영구 삭제됩니다)')) {
+      if(confirm('이 계약서 사본을 삭제하시겠습니까? (구글 드라이브 원본도 삭제됩니다)')) {
         const proj = appData.projects.find(p => p.id === activeDetailProjectId);
         if (proj && proj.contractDocsList) { 
           const removedUrl = proj.contractDocsList[idx];
@@ -1056,6 +1083,7 @@
       document.getElementById('project-album-modal').classList.add('hidden'); 
     }
     
+    // 💡 앨범 여러 장 사진 업로드 
     async function handleAlbumFilesSelect(input) {
       if (!input.files || input.files.length === 0) return;
       const icon = document.getElementById('icon-album-file'); const text = document.getElementById('text-album-file');
@@ -1063,11 +1091,15 @@
       
       const total = input.files.length;
       let count = 0;
+
+      // 입력된 공사명이 있으면 폴더명으로 사용, 없으면 날짜 기반 기본 이름
+      let targetFolder = document.getElementById('album-title').value.trim();
+      if (!targetFolder) targetFolder = "새_앨범_" + new Date().toISOString().slice(0,10);
       
       for (const file of Array.from(input.files)) {
         count++;
         text.innerText = `사진 서버에 저장 중... (${count}/${total})`;
-        const url = await uploadImageToDrive(file);
+        const url = await uploadImageToDrive(file, targetFolder);
         if (url) {
           currentAlbumPhotos.push(url);
           renderAlbumPreviewGrid(); 
@@ -1125,10 +1157,13 @@
       const total = input.files.length;
       let count = 0;
 
+      const album = appData.projectAlbums.find(a => a.id === activeEditAlbumId);
+      const targetFolder = album ? album.title : "수정_앨범";
+
       for (const file of Array.from(input.files)) {
         count++;
         text.innerText = `사진 추가 중... (${count}/${total})`;
-        const url = await uploadImageToDrive(file); 
+        const url = await uploadImageToDrive(file, targetFolder); 
         if (url) {
           editNewPhotos.push(url);
           renderEditAlbumGrid(); 
