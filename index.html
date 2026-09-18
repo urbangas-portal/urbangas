@@ -40,8 +40,8 @@
     @media print {
       @page { size: A4 portrait; margin: 12mm; }
       body * { visibility: hidden !important; }
-      #pdf-export-modal, #pdf-export-modal * { visibility: visible !important; }
-      #pdf-export-modal {
+      #pdf-export-modal, #pdf-export-modal *, #print-table-modal, #print-table-modal * { visibility: visible !important; }
+      #pdf-export-modal, #print-table-modal {
         position: absolute !important; left: 0 !important; top: 0 !important;
         width: 100% !important; background: white !important; display: block !important; padding: 0 !important; margin: 0 !important;
       }
@@ -169,7 +169,6 @@
         <div>
           <div class="flex flex-wrap items-center gap-2 mb-2">
             <span class="px-3 py-1 bg-skybrand-100 text-skybrand-700 text-xs font-bold rounded-lg border">광진유한회사 기술시공본부</span>
-            <!-- 구글 드라이브 클라우드 상태 뱃지 -->
             <span id="sync-drive-badge" class="px-3 py-0.5 rounded-full text-[11px] font-black bg-emerald-100 text-emerald-700 border border-emerald-400">
               📁 Google Drive 실시간 클라우드 연동
             </span>
@@ -177,8 +176,10 @@
           <h2 class="text-2xl font-black text-slate-900">강희성 부장 현장 총괄 관제실</h2>
         </div>
         <div class="flex items-center gap-2">
-          <button onclick="fetchDriveData(true)" class="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl font-bold text-xs shadow-sm transition-all"><i data-lucide="cloud-sync" class="w-4 h-4"></i><span>구글드라이브 수동동기화</span></button>
-          <button onclick="logoutManagerMode()" class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-900 text-white px-4 py-2.5 rounded-xl font-bold text-xs transition-all"><i data-lucide="log-out" class="w-4 h-4"></i><span>관제실 종료</span></button>
+          <!-- 💡 추가된 비밀번호 변경 버튼 -->
+          <button onclick="openChangePinModal()" class="flex items-center gap-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 px-3.5 py-2.5 rounded-xl font-bold text-xs transition-all"><i data-lucide="key" class="w-4 h-4"></i><span>비밀번호 변경</span></button>
+          <button onclick="fetchDriveData(true)" class="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl font-bold text-xs shadow-sm transition-all"><i data-lucide="cloud-sync" class="w-4 h-4"></i><span>동기화</span></button>
+          <button onclick="logoutManagerMode()" class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-900 text-white px-4 py-2.5 rounded-xl font-bold text-xs transition-all"><i data-lucide="log-out" class="w-4 h-4"></i><span>종료</span></button>
         </div>
       </div>
 
@@ -192,17 +193,17 @@
       <!-- 1. 현장 공정 관리 -->
       <div id="tab-content-project" class="bg-white rounded-2xl p-6 border shadow-sm">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
-          <!-- 검색 기능 -->
           <div class="relative w-full sm:w-72 shrink-0">
             <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
             <input type="text" id="search-project" oninput="renderProjects()" placeholder="공사명, 고객/상호명 검색" class="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:border-skybrand-500 outline-none transition-all">
           </div>
           <div class="flex items-center justify-between w-full sm:w-auto gap-4">
-            <!-- 완료 현장 숨기기 토글 -->
             <label class="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" id="filter-hide-completed" onchange="renderProjects()" class="w-4 h-4 rounded text-skybrand-600 focus:ring-skybrand-500 border-slate-300">
               <span class="text-xs font-bold text-slate-600">완료된 공사 숨기기</span>
             </label>
+            <!-- 💡 추가: 현장 보드 출력 버튼 -->
+            <button onclick="printProjectBoard()" class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-900 text-white px-3.5 py-2.5 rounded-xl text-xs font-bold shadow-sm transition-all shrink-0"><i data-lucide="printer" class="w-4 h-4"></i><span>보드 출력</span></button>
             <button onclick="openNewProjectModal()" class="flex items-center gap-1.5 bg-skybrand-600 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition-all hover:bg-skybrand-700 shadow-sm shrink-0"><i data-lucide="plus" class="w-4 h-4"></i><span>신규 현장 추가</span></button>
           </div>
         </div>
@@ -231,12 +232,13 @@
 
       <!-- 3. 세금계산서 발행 내역 -->
       <div id="tab-content-tax" class="hidden bg-white rounded-2xl p-6 border shadow-sm">
-        <!-- 세금계산서 검색 기능 -->
         <div class="flex justify-between items-center mb-4 gap-4 border-b pb-4">
           <div class="relative w-full sm:w-72">
             <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
             <input type="text" id="search-tax" oninput="renderTaxInvoiceList()" placeholder="공사명, 상호명 검색" class="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:border-skybrand-500 outline-none transition-all">
           </div>
+          <!-- 💡 추가: 세금계산서 발행 내역 출력 버튼 -->
+          <button onclick="printTaxList()" class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-900 text-white px-3.5 py-2.5 rounded-xl text-xs font-bold shadow-sm transition-all shrink-0"><i data-lucide="printer" class="w-4 h-4"></i><span>내역 출력</span></button>
         </div>
         <div class="overflow-x-auto">
           <table class="w-full text-left text-xs sm:text-sm">
@@ -259,10 +261,10 @@
   </footer>
 
   <!-- ==============================================
-       모달 (팝업창) 영역 모음 
+       모달 영역 모음 
        ============================================== -->
 
-  <!-- [1] 비밀번호 모달 -->
+  <!-- [1] 비밀번호 인증 모달 -->
   <div id="password-modal" class="fixed inset-0 z-50 bg-slate-900/60 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl p-6 max-w-sm w-full border shadow-2xl">
       <h3 class="text-lg font-black text-center mb-1">스마트 관제실 인증</h3>
@@ -275,7 +277,20 @@
     </div>
   </div>
 
-  <!-- [2] 현장 공정 등록 모달 -->
+  <!-- [1-1] 비밀번호 변경 모달 -->
+  <div id="change-pin-modal" class="fixed inset-0 z-[60] bg-slate-900/60 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl p-6 max-w-sm w-full border shadow-2xl space-y-3">
+      <h3 class="text-lg font-black text-center mb-2">관리자 비밀번호 변경</h3>
+      <div><label class="block text-xs font-bold mb-1">기존 비밀번호</label><input type="password" id="old-pin" maxlength="10" class="w-full border p-2.5 rounded-xl font-bold"></div>
+      <div><label class="block text-xs font-bold mb-1">신규 비밀번호 (4자리 이상)</label><input type="password" id="new-pin" maxlength="10" class="w-full border p-2.5 rounded-xl font-bold"></div>
+      <div class="flex gap-2 pt-2">
+        <button onclick="document.getElementById('change-pin-modal').classList.add('hidden')" class="flex-1 py-2.5 bg-slate-100 rounded-xl font-bold">취소</button>
+        <button onclick="submitChangePin()" class="flex-1 py-2.5 bg-skybrand-600 text-white rounded-xl font-bold">변경하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- [2] 신규 현장 등록 모달 -->
   <div id="project-modal" class="fixed inset-0 z-50 bg-slate-900/60 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl p-6 max-w-2xl w-full border shadow-2xl overflow-y-auto max-h-[92vh]">
       <div class="flex justify-between items-center mb-4 pb-2 border-b">
@@ -320,7 +335,7 @@
     </div>
   </div>
 
-  <!-- [3] 사진 앨범 등록 (신규 앨범) 모달 -->
+  <!-- [3] 사진 앨범 등록 모달 -->
   <div id="project-album-modal" class="fixed inset-0 z-50 bg-slate-900/60 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl p-6 max-w-xl w-full border shadow-2xl overflow-y-auto max-h-[92vh]">
       <div class="flex justify-between items-center mb-4 pb-2 border-b"><h3 class="text-base font-black">새로운 앨범 생성</h3><button type="button" onclick="closeAddProjectAlbumModal()"><i data-lucide="x" class="w-5 h-5 text-slate-400"></i></button></div>
@@ -345,7 +360,7 @@
     </div>
   </div>
 
-  <!-- [4] 사진 관리 통합 편집기 (수정/삭제/추가) 모달 -->
+  <!-- [4] 사진 관리 통합 편집기 -->
   <div id="edit-album-modal" class="fixed inset-0 z-[60] bg-slate-900/60 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl p-6 max-w-2xl w-full border shadow-2xl overflow-y-auto max-h-[92vh]">
       <div class="flex justify-between items-center mb-4 pb-2 border-b">
@@ -376,7 +391,7 @@
     </div>
   </div>
 
-  <!-- [5] 현장 상세 관리 및 수정 모달 (1열로 넓어진 정산 보드 적용) -->
+  <!-- [5] 현장 상세 관리 및 수정 모달 (계약서 다중 저장 지원) -->
   <div id="project-detail-modal" class="fixed inset-0 z-50 bg-slate-900/70 hidden flex items-center justify-center p-2 sm:p-4">
     <div class="bg-white rounded-3xl max-w-4xl w-full border shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
       <div class="p-5 sm:p-6 border-b flex justify-between items-center bg-slate-50 shrink-0">
@@ -424,7 +439,6 @@
           </div>
         </div>
 
-        <!-- 공급받는자 -->
         <div class="bg-skybrand-50/40 border border-skybrand-200 p-4 rounded-xl space-y-3">
           <h4 class="font-bold text-skybrand-700 text-[11px] mb-1">■ 공급받는자 정보 (세금계산서 발행처)</h4>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -435,7 +449,6 @@
           </div>
         </div>
 
-        <!-- 발주처 -->
         <div class="bg-slate-50 border border-slate-200 p-4 rounded-xl space-y-3">
           <h4 class="font-bold text-slate-700 text-[11px] mb-1">■ 발주처</h4>
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -445,7 +458,7 @@
           </div>
         </div>
 
-        <!-- 💡 1단(세로) 배치로 넓어진 금액 정산 보드 -->
+        <!-- 정산 보드 -->
         <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-4">
           <div class="flex justify-between items-center border-b border-slate-100 pb-3">
             <h4 class="font-black text-sm text-slate-800">금액 정산 및 청구 내역</h4>
@@ -456,7 +469,6 @@
           </div>
           
           <div class="grid grid-cols-1 gap-4">
-            <!-- 1. 총공사금액 -->
             <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <label class="text-sm font-bold text-slate-700">기본 총 공사금액</label>
               <div class="flex items-center gap-2 w-full sm:w-1/2 md:w-1/3">
@@ -465,7 +477,6 @@
               </div>
             </div>
             
-            <!-- 2. 추가공사금액 다중 입력 (1줄 배치로 넓어짐) -->
             <div class="bg-skybrand-50/30 p-4 rounded-xl border border-skybrand-100">
               <div class="flex justify-between items-center mb-3">
                  <label class="text-sm font-bold text-skybrand-800">추가 공사금액 내역</label>
@@ -475,7 +486,6 @@
               <div class="mt-4 text-right text-xs font-bold text-slate-600 border-t border-skybrand-200 pt-3">추가금 합계: <span id="extra-sum-display" class="font-black text-skybrand-700 text-base ml-1">0 원</span></div>
             </div>
             
-            <!-- 3. 입금액 다중 입력 (1줄 배치로 넓어짐) -->
             <div class="bg-emerald-50/30 p-4 rounded-xl border border-emerald-100">
               <div class="flex justify-between items-center mb-3">
                  <label class="text-sm font-bold text-emerald-800">입금 처리 내역</label>
@@ -487,25 +497,30 @@
           </div>
         </div>
 
-        <div class="bg-slate-50 border border-slate-200 p-4 rounded-xl mt-4">
-          <h4 class="font-bold text-slate-700 text-[11px] mb-3">■ 첨부 서류 (PDF 파일을 올리면 자동으로 고화질 그림으로 변환되어 저장됩니다)</h4>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-             <div>
-                <div class="flex justify-between items-center mb-2">
-                  <span class="font-bold text-slate-700 text-xs">사업자등록증 사본</span>
-                  <button type="button" onclick="document.getElementById('biz-license-input').click()" class="text-xs text-skybrand-600 font-bold bg-skybrand-50 px-2 py-1 rounded hover:bg-skybrand-100 transition-colors">+ 업로드</button>
-                  <input type="file" id="biz-license-input" accept="image/*,application/pdf" onchange="uploadDocument(this, 'bizLicense')" class="hidden">
-                </div>
-                <div id="bizLicense-preview" class="h-32 bg-white rounded-xl border border-dashed border-slate-300 flex items-center justify-center text-slate-400 text-xs relative overflow-hidden">없음</div>
-             </div>
-             <div>
-                <div class="flex justify-between items-center mb-2">
-                  <span class="font-bold text-slate-700 text-xs">계약서 및 계산서 사본</span>
-                  <button type="button" onclick="document.getElementById('contract-input').click()" class="text-xs text-skybrand-600 font-bold bg-skybrand-50 px-2 py-1 rounded hover:bg-skybrand-100 transition-colors">+ 업로드</button>
-                  <input type="file" id="contract-input" accept="image/*,application/pdf" onchange="uploadDocument(this, 'contractDoc')" class="hidden">
-                </div>
-                <div id="contractDoc-preview" class="h-32 bg-white rounded-xl border border-dashed border-slate-300 flex items-center justify-center text-slate-400 text-xs relative overflow-hidden">없음</div>
-             </div>
+        <!-- 첨부 서류 (사업자등록증 + 계약서 다중 저장) -->
+        <div class="bg-slate-50 border border-slate-200 p-4 rounded-xl mt-4 space-y-4">
+          <h4 class="font-bold text-slate-700 text-[11px]">■ 첨부 서류 (PDF/이미지 자동 변환 및 다중 저장)</h4>
+          
+          <!-- 사업자등록증 -->
+          <div>
+            <div class="flex justify-between items-center mb-2">
+              <span class="font-bold text-slate-700 text-xs">사업자등록증 사본</span>
+              <button type="button" onclick="document.getElementById('biz-license-input').click()" class="text-xs text-skybrand-600 font-bold bg-skybrand-50 px-2 py-1 rounded hover:bg-skybrand-100 transition-colors">+ 업로드</button>
+              <input type="file" id="biz-license-input" accept="image/*,application/pdf" onchange="uploadDocument(this, 'bizLicense')" class="hidden">
+            </div>
+            <div id="bizLicense-preview" class="h-32 bg-white rounded-xl border border-dashed border-slate-300 flex items-center justify-center text-slate-400 text-xs relative overflow-hidden">없음</div>
+          </div>
+
+          <!-- 💡 계약서 및 계산서 사본 (여러 건 저장 지원) -->
+          <div>
+            <div class="flex justify-between items-center mb-2">
+              <span class="font-bold text-slate-700 text-xs">계약서 및 계산서 사본 (여러 건 저장 가능)</span>
+              <button type="button" onclick="document.getElementById('contract-input').click()" class="text-xs text-skybrand-600 font-bold bg-skybrand-50 px-2 py-1 rounded hover:bg-skybrand-100 transition-colors">+ 서류 추가</button>
+              <input type="file" id="contract-input" accept="image/*,application/pdf" multiple onchange="uploadMultiDocuments(this, 'contractDocsList')" class="hidden">
+            </div>
+            <div id="contractDocsList-preview" class="grid grid-cols-3 sm:grid-cols-4 gap-2 bg-white p-3 rounded-xl border border-dashed border-slate-300 min-h-[5rem] items-center">
+              <span class="text-xs text-slate-400 col-span-full text-center">등록된 계약서가 없습니다.</span>
+            </div>
           </div>
         </div>
       </div>
@@ -588,7 +603,7 @@
     </div>
   </div>
 
-  <!-- [9] PDF 출력용 -->
+  <!-- [9] PDF 출력용 (인쇄할 때만 나타나는 양식 - 계약서 다중 페이지 자동 생성 포함) -->
   <div id="pdf-export-modal" class="hidden">
     <div class="print-page">
       <div class="w-full h-full flex flex-col">
@@ -655,15 +670,20 @@
       </div>
     </div>
     
+    <!-- 페이지 2: 사업자등록증 -->
     <div class="print-page" id="pdf-page-biz" style="display:none;">
       <h2 class="text-xl font-black mb-4">[첨부] 사업자등록증 사본</h2>
       <div id="pdf-biz-wrap" class="flex-grow flex items-center justify-center overflow-hidden"></div>
     </div>
     
-    <div class="print-page" id="pdf-page-contract" style="display:none;">
-      <h2 class="text-xl font-black mb-4">[첨부] 계약서 및 계산서 사본</h2>
-      <div id="pdf-contract-wrap" class="flex-grow flex items-center justify-center overflow-hidden"></div>
-    </div>
+    <!-- 페이지 3~N: 계약서 다중 페이지 동적 삽입 영역 -->
+    <div id="pdf-contract-container"></div>
+  </div>
+
+  <!-- [10] 테이블 출력 전용 숨김 모달 -->
+  <div id="print-table-modal" class="hidden bg-white p-8">
+    <h1 id="print-table-title" class="text-2xl font-black mb-4">광진유한회사 출력물</h1>
+    <div id="print-table-content"></div>
   </div>
 
 
@@ -671,7 +691,8 @@
        JavaScript 핵심 로직 영역
        ============================================== -->
   <script>
-    const SECRET_PIN = "1270";
+    // 💡 비밀번호 관리 (localStorage 저장 지원)
+    let SECRET_PIN = localStorage.getItem('gwangjin_custom_pin') || "1270";
     const NO_IMAGE_PLACEHOLDER = "data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22600%22%20height%3D%22400%22%3E%3Crect%20fill%3D%22%23f1f5f9%22%20width%3D%22600%22%20height%3D%22400%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20text-anchor%3D%22middle%22%20font-size%3D%2218%22%20font-weight%3D%22bold%22%20fill%3D%22%23cbd5e1%22%3E%EB%93%B1%EB%A1%9D%EB%90%9C%20%EC%82%AC%EC%A7%84%20%EC%97%86%EC%9D%8C%3C%2Ftext%3E%3C%2Fsvg%3E";
 
     // 💡 [필수] 구글 앱스 스크립트 웹 앱 URL을 아래 따옴표 안에 넣으세요!
@@ -786,14 +807,56 @@
       input.value = '';
     }
 
+    // 💡 다중 서류 업로드 핸들러
+    async function uploadMultiDocuments(input, listKey) {
+      if (!input.files || input.files.length === 0) return;
+      const proj = appData.projects.find(p => p.id === activeDetailProjectId); if (!proj) return;
+      if (!proj[listKey]) proj[listKey] = [];
+
+      for (const file of Array.from(input.files)) {
+        try {
+          let imageFile = file;
+          if (file.type === "application/pdf" || file.name.toLowerCase().endsWith('.pdf')) { 
+            imageFile = await convertPdfToImage(file); 
+          }
+          const url = await uploadImageToDrive(imageFile);
+          proj[listKey].push(url);
+        } catch(e) {}
+      }
+      renderDocumentPreviews();
+      input.value = '';
+    }
+
     function renderDocumentPreviews() {
       const proj = appData.projects.find(p => p.id === activeDetailProjectId); if (!proj) return;
+      
       const bizPreview = document.getElementById('bizLicense-preview');
-      if (proj.bizLicense) { bizPreview.innerHTML = `<img src="${proj.bizLicense}" class="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity" onclick="window.open('${proj.bizLicense}', '_blank')"><button type="button" onclick="clearDocument('bizLicense')" class="absolute top-1 right-1 bg-rose-600 text-white rounded-full p-1.5 shadow-md hover:bg-rose-700 transition-colors"><i data-lucide="x" class="w-3 h-3"></i></button>`; } 
-      else { bizPreview.innerHTML = `없음`; }
-      const contractPreview = document.getElementById('contractDoc-preview');
-      if (proj.contractDoc) { contractPreview.innerHTML = `<img src="${proj.contractDoc}" class="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity" onclick="window.open('${proj.contractDoc}', '_blank')"><button type="button" onclick="clearDocument('contractDoc')" class="absolute top-1 right-1 bg-rose-600 text-white rounded-full p-1.5 shadow-md hover:bg-rose-700 transition-colors"><i data-lucide="x" class="w-3 h-3"></i></button>`; } 
-      else { contractPreview.innerHTML = `없음`; }
+      if (proj.bizLicense) { 
+        bizPreview.innerHTML = `<img src="${proj.bizLicense}" class="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity" onclick="window.open('${proj.bizLicense}', '_blank')"><button type="button" onclick="clearDocument('bizLicense')" class="absolute top-1 right-1 bg-rose-600 text-white rounded-full p-1.5 shadow-md hover:bg-rose-700 transition-colors"><i data-lucide="x" class="w-3 h-3"></i></button>`; 
+      } else { 
+        bizPreview.innerHTML = `없음`; 
+      }
+
+      // 계약서 다중 리스트 렌더링
+      const contractContainer = document.getElementById('contractDocsList-preview');
+      contractContainer.innerHTML = '';
+      const list = proj.contractDocsList || [];
+      if (list.length === 0 && proj.contractDoc) {
+        list.push(proj.contractDoc); // 구버전 호환
+      }
+
+      if (list.length === 0) {
+        contractContainer.innerHTML = `<span class="text-xs text-slate-400 col-span-full text-center">등록된 계약서가 없습니다.</span>`;
+      } else {
+        list.forEach((src, idx) => {
+          contractContainer.innerHTML += `
+            <div class="relative h-20 rounded-lg overflow-hidden border bg-white shadow-sm">
+              <img src="${src}" class="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity" onclick="window.open('${src}', '_blank')">
+              <button type="button" onclick="removeMultiDoc(${idx})" class="absolute top-1 right-1 bg-rose-600 text-white rounded-full p-1 shadow-md hover:bg-rose-700 transition-colors"><i data-lucide="x" class="w-3 h-3"></i></button>
+            </div>
+          `;
+        });
+      }
       lucide.createIcons();
     }
 
@@ -801,6 +864,16 @@
       if(confirm('이 첨부 서류를 삭제하시겠습니까?')) {
         const proj = appData.projects.find(p => p.id === activeDetailProjectId);
         if (proj) { proj[docType] = ""; renderDocumentPreviews(); }
+      }
+    }
+
+    function removeMultiDoc(idx) {
+      if(confirm('이 계약서 사본을 삭제하시겠습니까?')) {
+        const proj = appData.projects.find(p => p.id === activeDetailProjectId);
+        if (proj && proj.contractDocsList) {
+          proj.contractDocsList.splice(idx, 1);
+          renderDocumentPreviews();
+        }
       }
     }
 
@@ -814,11 +887,86 @@
       if (document.getElementById('manager-password-input').value === SECRET_PIN) {
         closePasswordModal(); document.getElementById('view-public').classList.add('hidden'); document.getElementById('view-manager').classList.remove('hidden');
         fetchDriveData(false); renderManagerAlbumList(); renderProjects(); renderTaxInvoiceList(); window.scrollTo({ top: 0, behavior: 'smooth' });
-      } else { document.getElementById('password-error').classList.remove('hidden'); }
+      } else { document.getElementById('password-error').classList.add('hidden'); document.getElementById('password-error').classList.remove('hidden'); }
     }
     function logoutManagerMode() {
       document.getElementById('view-manager').classList.add('hidden'); document.getElementById('view-public').classList.remove('hidden');
       filterGallery(currentFilter); window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // 💡 비밀번호 변경 로직
+    function openChangePinModal() {
+      document.getElementById('old-pin').value = '';
+      document.getElementById('new-pin').value = '';
+      document.getElementById('change-pin-modal').classList.remove('hidden');
+    }
+    function submitChangePin() {
+      const oldP = document.getElementById('old-pin').value;
+      const newP = document.getElementById('new-pin').value;
+      if (oldP !== SECRET_PIN) { alert('기존 비밀번호가 일치하지 않습니다.'); return; }
+      if (!newP || newP.length < 4) { alert('신규 비밀번호는 4자리 이상이어야 합니다.'); return; }
+      SECRET_PIN = newP;
+      localStorage.setItem('gwangjin_custom_pin', SECRET_PIN);
+      alert('비밀번호가 성공적으로 변경되었습니다!');
+      document.getElementById('change-pin-modal').classList.add('hidden');
+    }
+
+    // 💡 데이터 출력(인쇄) 기능 추가
+    function printProjectBoard() {
+      const modal = document.getElementById('print-table-modal');
+      const title = document.getElementById('print-table-title');
+      const content = document.getElementById('print-table-content');
+      
+      title.innerText = "[광진유한회사] 현장 공정 관리 보드 내역";
+      
+      let html = `<table class="w-full text-left border-collapse border border-slate-300 text-xs">
+                    <thead><tr class="bg-slate-100"><th class="border p-2">연도/현장명</th><th class="border p-2">상호(고객)</th><th class="border p-2">총 공사금액</th><th class="border p-2">입금액</th><th class="border p-2">잔금</th><th class="border p-2">상태</th></tr></thead><tbody>`;
+      
+      appData.projects.forEach(p => {
+        const tot = (p.totalAmount || 0) + (p.extraAmount || 0);
+        const dep = p.depositAmount || 0;
+        const bal = tot - dep;
+        html += `<tr>
+                   <td class="border p-2 font-bold">[${p.year || '-'}] ${p.title}</td>
+                   <td class="border p-2">${p.client}</td>
+                   <td class="border p-2">${tot.toLocaleString()}원</td>
+                   <td class="border p-2 text-emerald-600">${dep.toLocaleString()}원</td>
+                   <td class="border p-2 text-rose-600 font-bold">${bal.toLocaleString()}원</td>
+                   <td class="border p-2">${p.isCompleted ? '완료' : '진행중'}</td>
+                 </tr>`;
+      });
+      html += `</tbody></table>`;
+      content.innerHTML = html;
+      
+      modal.classList.remove('hidden');
+      window.print();
+      modal.classList.add('hidden');
+    }
+
+    function printTaxList() {
+      const modal = document.getElementById('print-table-modal');
+      const title = document.getElementById('print-table-title');
+      const content = document.getElementById('print-table-content');
+      
+      title.innerText = "[광진유한회사] 세금계산서 발행 내역";
+      
+      let html = `<table class="w-full text-left border-collapse border border-slate-300 text-xs">
+                    <thead><tr class="bg-slate-100"><th class="border p-2">발행일시</th><th class="border p-2">공사명</th><th class="border p-2">공급받는자</th><th class="border p-2">합계금액</th></tr></thead><tbody>`;
+      
+      appData.taxInvoices.forEach(inv => {
+        html += `<tr>
+                   <td class="border p-2">${inv.date}</td>
+                   <td class="border p-2 font-bold">${inv.title}</td>
+                   <td class="border p-2">${inv.client}</td>
+                   <td class="border p-2 font-bold">${(inv.grandTotal || 0).toLocaleString()}원</td>
+                 </tr>`;
+      });
+      html += `</tbody></table>`;
+      content.innerHTML = html;
+      
+      modal.classList.remove('hidden');
+      window.print();
+      modal.classList.add('hidden');
     }
 
     let currentFilter = '전체';
@@ -988,6 +1136,7 @@
         totalAmount: Number(document.getElementById('new-proj-total').value || 0), 
         extraAmount: 0, depositAmount: 0, 
         extraAmountsList: [], depositAmountsList: [], 
+        contractDocsList: [], // 💡 계약서 다중 리스트 초기화
         extraItems: [], bizLicense: "", contractDoc: ""
       };
       appData.projects.unshift(newProj); closeNewProjectModal(); renderProjects(); triggerAutoSync(); 
@@ -995,13 +1144,12 @@
 
     let activeDetailProjectId = null;
 
-    // 💡 변경: 1열 배치로 인해 넓어진 폼에 맞춘 렌더링 함수
     function renderExtraAmountRows() {
       const container = document.getElementById('extra-amounts-container'); container.innerHTML = '';
       tempExtraAmounts.forEach((item, idx) => {
         container.innerHTML += `
           <div class="flex gap-2 items-center mb-2">
-            <input type="date" value="${item.date || ''}" oninput="tempExtraAmounts[${idx}].date=this.value" class="w-28 border border-slate-300 p-2 rounded text-xs outline-none focus:border-skybrand-500 shrink-0">
+            <input type="date" value="${item.date || ''}" oninput="tempExtraAmounts[${idx}].date=this.value" class="w-32 border border-slate-300 p-2 rounded text-xs outline-none focus:border-skybrand-500 shrink-0">
             <input type="text" placeholder="추가 공사 내역 상세 입력" value="${item.memo || ''}" oninput="tempExtraAmounts[${idx}].memo=this.value" class="flex-grow border border-slate-300 p-2 rounded text-xs outline-none focus:border-skybrand-500 min-w-0">
             <input type="number" placeholder="금액" value="${item.amount || ''}" oninput="tempExtraAmounts[${idx}].amount=this.value; updateSettlementDisplayOnly()" class="w-32 border border-slate-300 p-2 rounded text-xs font-bold text-right outline-none focus:border-skybrand-500 shrink-0">
             <span class="text-xs font-bold text-slate-500">원</span>
@@ -1018,7 +1166,7 @@
       tempDepositAmounts.forEach((item, idx) => {
         container.innerHTML += `
           <div class="flex gap-2 items-center mb-2">
-            <input type="date" value="${item.date || ''}" oninput="tempDepositAmounts[${idx}].date=this.value" class="w-28 border border-slate-300 p-2 rounded text-xs outline-none focus:border-emerald-500 shrink-0">
+            <input type="date" value="${item.date || ''}" oninput="tempDepositAmounts[${idx}].date=this.value" class="w-32 border border-slate-300 p-2 rounded text-xs outline-none focus:border-emerald-500 shrink-0">
             <input type="text" placeholder="입금 내역 상세 입력" value="${item.memo || ''}" oninput="tempDepositAmounts[${idx}].memo=this.value" class="flex-grow border border-slate-300 p-2 rounded text-xs outline-none focus:border-emerald-500 min-w-0">
             <input type="number" placeholder="금액" value="${item.amount || ''}" oninput="tempDepositAmounts[${idx}].amount=this.value; updateSettlementDisplayOnly()" class="w-32 border border-slate-300 p-2 rounded text-xs font-bold text-right outline-none focus:border-emerald-500 shrink-0">
             <span class="text-xs font-bold text-slate-500">원</span>
@@ -1170,6 +1318,7 @@
       document.getElementById('tax-issue-prompt-modal').classList.remove('hidden');
     }
 
+    // 💡 세금계산서 인쇄 시 계약서 다중 페이지 동적 생성 연동
     function confirmAndGenerateTaxInvoice() {
       const s = Number(document.getElementById('tax-prompt-supply').value||0), v = Number(document.getElementById('tax-prompt-vat').value||0);
       document.getElementById('tax-issue-prompt-modal').classList.add('hidden');
@@ -1189,11 +1338,11 @@
       document.getElementById('pdf-supply').innerText = s.toLocaleString() + ' 원';
       document.getElementById('pdf-vat').innerText = v.toLocaleString() + ' 원'; 
       document.getElementById('pdf-bal-table').innerText = bal.toLocaleString() + ' 원';
-      
       document.getElementById('pdf-hero-supply').innerText = s.toLocaleString() + ' 원';
 
       document.getElementById('pdf-export-modal').classList.remove('hidden');
       
+      // 사업자등록증 페이지 세팅
       if (proj.bizLicense) {
         document.getElementById('pdf-page-biz').style.display = 'flex';
         document.getElementById('pdf-biz-wrap').innerHTML = `<img src="${proj.bizLicense}" class="max-h-[80vh] object-contain">`;
@@ -1201,12 +1350,23 @@
         document.getElementById('pdf-page-biz').style.display = 'none';
       }
 
-      if (proj.contractDoc) {
-        document.getElementById('pdf-page-contract').style.display = 'flex';
-        document.getElementById('pdf-contract-wrap').innerHTML = `<img src="${proj.contractDoc}" class="max-h-[80vh] object-contain">`;
-      } else {
-        document.getElementById('pdf-page-contract').style.display = 'none';
-      }
+      // 💡 계약서 다중 페이지 동적 생성
+      const contractContainer = document.getElementById('pdf-contract-container');
+      contractContainer.innerHTML = '';
+      const list = proj.contractDocsList || [];
+      if (list.length === 0 && proj.contractDoc) list.push(proj.contractDoc);
+
+      list.forEach((docSrc, index) => {
+        const pageDiv = document.createElement('div');
+        pageDiv.className = "print-page";
+        pageDiv.innerHTML = `
+          <h2 class="text-xl font-black mb-4">[첨부] 계약서 및 계산서 사본 (${index + 1}/${list.length})</h2>
+          <div class="flex-grow flex items-center justify-center overflow-hidden">
+            <img src="${docSrc}" class="max-h-[80vh] object-contain">
+          </div>
+        `;
+        contractContainer.appendChild(pageDiv);
+      });
       
       appData.taxInvoices.unshift({ id: Date.now(), title: proj.title, client: proj.client, grandTotal: s+v, date: new Date().toLocaleString() });
       renderTaxInvoiceList(); triggerAutoSync(); 
