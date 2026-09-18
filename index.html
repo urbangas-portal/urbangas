@@ -8,6 +8,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
 
+  <!-- PDF를 이미지로 자동 변환해주는 라이브러리 추가 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
   <script>
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
@@ -356,7 +357,7 @@
     </div>
   </div>
 
-  <!-- [4] 사진 관리 통합 편집기 (수정/삭제/추가) 모달 -->
+  <!-- [4] 사진 관리 통합 편집기 -->
   <div id="edit-album-modal" class="fixed inset-0 z-[60] bg-slate-900/60 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl p-6 max-w-2xl w-full border shadow-2xl overflow-y-auto max-h-[92vh]">
       <div class="flex justify-between items-center mb-4 pb-2 border-b">
@@ -452,7 +453,6 @@
           </div>
         </div>
 
-        <!-- 1단 세로 정산 보드 -->
         <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-4">
           <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-100 pb-3 gap-3">
             <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
@@ -497,7 +497,6 @@
           </div>
         </div>
 
-        <!-- 💡 서류 첨부 (다중 문서 렌더링 및 삭제 연동) -->
         <div class="bg-slate-50 border border-slate-200 p-4 rounded-xl mt-4 space-y-4">
           <h4 class="font-bold text-slate-700 text-[11px]">■ 첨부 서류 (PDF/이미지 자동 변환 및 다중 저장)</h4>
           
@@ -514,10 +513,8 @@
             <div class="flex justify-between items-center mb-2">
               <span class="font-bold text-slate-700 text-xs">계약서 및 계산서 사본 <span class="text-[10px] text-skybrand-500">(여러 건 무제한 저장 가능)</span></span>
               <button type="button" onclick="document.getElementById('contract-input').click()" class="text-xs text-skybrand-600 font-bold bg-skybrand-50 px-2 py-1 rounded hover:bg-skybrand-100 transition-colors">+ 서류 추가</button>
-              <!-- 💡 multiple 속성 유지 -->
               <input type="file" id="contract-input" accept="image/*,application/pdf" multiple onchange="uploadMultiDocuments(this, 'contractDocsList')" class="hidden">
             </div>
-            <!-- 💡 여러 장의 계약서가 바둑판 형태로 나열되는 영역 -->
             <div id="contractDocsList-preview" class="grid grid-cols-3 sm:grid-cols-4 gap-2 bg-white p-3 rounded-xl border border-dashed border-slate-300 min-h-[5rem] items-center">
               <span class="text-xs text-slate-400 col-span-full text-center">등록된 계약서가 없습니다.</span>
             </div>
@@ -675,7 +672,6 @@
       <div id="pdf-biz-wrap" class="flex-grow flex items-center justify-center overflow-hidden"></div>
     </div>
     
-    <!-- 💡 계약서 다중 페이지 동적 삽입 영역 -->
     <div id="pdf-contract-container"></div>
   </div>
 
@@ -695,7 +691,6 @@
     // 💡 [필수] 구글 앱스 스크립트 웹 앱 URL을 아래 따옴표 안에 넣으세요!
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw6cPLtRQhYMGtjpLuKnpB6Z_tmUuZO2WA9lIZ9FJHHfiBzmuTxgU4gd6RjrHZvERdX/exec";
 
-    // 💡 [핵심] 구글 드라이브 원본 삭제 함수
     async function deleteFileFromDrive(url) {
       if (!url || !GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("여기에")) return;
       try {
@@ -707,7 +702,6 @@
         }
         if (!fileId) return;
 
-        // 드라이브로 삭제 요청 (백그라운드 비동기)
         fetch(GOOGLE_SCRIPT_URL, {
           method: "POST",
           body: JSON.stringify({ action: "deleteFile", fileId: fileId })
@@ -766,12 +760,12 @@
         reader.onload = async (e) => {
           const img = new Image();
           img.onload = async () => {
-            const canvas = document.createElement('canvas'); const MAX_DIM = 1200; 
+            const canvas = document.createElement('canvas'); const MAX_DIM = 1024; // 💡 처리 속도 최적화
             let w = img.width, h = img.height;
             if (w > h && w > MAX_DIM) { h = Math.round(h * MAX_DIM / w); w = MAX_DIM; } else if (h > MAX_DIM) { w = Math.round(w * MAX_DIM / h); h = MAX_DIM; }
             canvas.width = w; canvas.height = h;
             const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, w, h);
-            const base64Data = canvas.toDataURL('image/jpeg', 0.8).split(',')[1]; 
+            const base64Data = canvas.toDataURL('image/jpeg', 0.7).split(',')[1]; // 💡 압축률 0.7로 속도 극대화
             
             if (GOOGLE_SCRIPT_URL && !GOOGLE_SCRIPT_URL.includes("여기에")) {
               try {
@@ -780,7 +774,7 @@
                 if (resJson.status === "success") { resolve(resJson.url); return; }
               } catch (e) {}
             }
-            resolve(canvas.toDataURL('image/jpeg', 0.8));
+            resolve(canvas.toDataURL('image/jpeg', 0.7));
           };
           img.src = e.target.result;
         };
@@ -801,7 +795,7 @@
             await page.render({ canvasContext: context, viewport: viewport }).promise;
             canvas.toBlob((blob) => {
               const imageFile = new File([blob], file.name.replace(/\.pdf$/i, '.jpg'), { type: 'image/jpeg' }); resolve(imageFile);
-            }, 'image/jpeg', 0.8);
+            }, 'image/jpeg', 0.7);
           } catch(e) { alert("PDF 변환 실패. 파일이 손상되었거나 암호가 걸려있을 수 있습니다."); reject(e); }
         };
         reader.readAsArrayBuffer(file);
@@ -819,11 +813,12 @@
         if (file.type === "application/pdf" || file.name.toLowerCase().endsWith('.pdf')) { imageFile = await convertPdfToImage(file); }
         const url = await uploadImageToDrive(imageFile);
         const proj = appData.projects.find(p => p.id === activeDetailProjectId);
-        if (proj) { proj[docType] = url; renderDocumentPreviews(); }
+        if (proj) { proj[docType] = url; renderDocumentPreviews(); triggerAutoSync(); }
       } catch (err) { renderDocumentPreviews(); }
       input.value = '';
     }
 
+    // 💡 여러 파일을 "동시에" 병렬로 업로드 처리하여 속도 극대화
     async function uploadMultiDocuments(input, listKey) {
       if (!input.files || input.files.length === 0) return;
       const proj = appData.projects.find(p => p.id === activeDetailProjectId); if (!proj) return;
@@ -831,14 +826,18 @@
       const previewEl = document.getElementById(listKey + '-preview');
       previewEl.innerHTML = `<div class="col-span-full flex flex-col items-center justify-center text-skybrand-600 py-4"><i data-lucide="loader-2" class="w-6 h-6 animate-spin mb-1"></i><span class="text-xs font-bold">업로드 및 변환 중...</span></div>`;
       lucide.createIcons();
-      for (const file of Array.from(input.files)) {
-        try {
-          let imageFile = file;
-          if (file.type === "application/pdf" || file.name.toLowerCase().endsWith('.pdf')) { imageFile = await convertPdfToImage(file); }
-          const url = await uploadImageToDrive(imageFile);
-          proj[listKey].push(url);
-        } catch(e) {}
-      }
+      
+      const promises = Array.from(input.files).map(async (file) => {
+        let imageFile = file;
+        if (file.type === "application/pdf" || file.name.toLowerCase().endsWith('.pdf')) { 
+          imageFile = await convertPdfToImage(file); 
+        }
+        return uploadImageToDrive(imageFile);
+      });
+
+      const urls = await Promise.all(promises);
+      proj[listKey].push(...urls.filter(Boolean));
+      
       renderDocumentPreviews(); triggerAutoSync(); input.value = '';
     }
 
@@ -848,8 +847,10 @@
       const bizPreview = document.getElementById('bizLicense-preview');
       if (proj.bizLicense) { 
         bizPreview.innerHTML = `<img src="${proj.bizLicense}" class="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity" onclick="window.open('${proj.bizLicense}', '_blank')"><button type="button" onclick="clearDocument('bizLicense')" class="absolute top-1 right-1 bg-rose-600 text-white rounded-full p-1.5 shadow-md hover:bg-rose-700 transition-colors"><i data-lucide="x" class="w-3 h-3"></i></button>`; 
-      } else { bizPreview.innerHTML = `없음`; }
-      
+      } else { 
+        bizPreview.innerHTML = `없음`; 
+      }
+
       const contractContainer = document.getElementById('contractDocsList-preview');
       contractContainer.innerHTML = '';
       const list = proj.contractDocsList || [];
@@ -863,7 +864,8 @@
               <img src="${src}" class="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity" onclick="window.open('${src}', '_blank')">
               <button type="button" onclick="removeMultiDoc(${idx})" class="absolute top-1 right-1 bg-rose-600 text-white rounded-full p-1 shadow-md hover:bg-rose-700 transition-colors opacity-0 group-hover:opacity-100"><i data-lucide="x" class="w-3 h-3"></i></button>
               <span class="absolute bottom-1 left-1 bg-black/60 text-white text-[10px] px-1.5 rounded">${idx+1}</span>
-            </div>`;
+            </div>
+          `;
         });
       }
       lucide.createIcons();
@@ -873,7 +875,7 @@
       if(confirm('이 첨부 서류를 삭제하시겠습니까? (구글 드라이브 원본도 영구 삭제됩니다)')) {
         const proj = appData.projects.find(p => p.id === activeDetailProjectId);
         if (proj && proj[docType]) { 
-          deleteFileFromDrive(proj[docType]); // 💡 드라이브 삭제 연동
+          deleteFileFromDrive(proj[docType]);
           proj[docType] = ""; 
           renderDocumentPreviews();
           triggerAutoSync();
@@ -887,7 +889,7 @@
         if (proj && proj.contractDocsList) { 
           const removedUrl = proj.contractDocsList[idx];
           proj.contractDocsList.splice(idx, 1); 
-          deleteFileFromDrive(removedUrl); // 💡 드라이브 삭제 연동
+          deleteFileFromDrive(removedUrl);
           renderDocumentPreviews(); 
           triggerAutoSync(); 
         }
@@ -1009,7 +1011,6 @@
     function openAddProjectAlbumModal() { document.getElementById('project-album-modal').classList.remove('hidden'); document.getElementById('album-date').valueAsDate = new Date(); document.getElementById('album-title').value = ''; document.getElementById('album-desc').value = ''; currentAlbumPhotos = []; renderAlbumPreviewGrid(); }
     
     function closeAddProjectAlbumModal() { 
-      // 취소 시 임시 업로드된 구글 드라이브 파일 즉시 삭제
       if (currentAlbumPhotos && currentAlbumPhotos.length > 0) {
         currentAlbumPhotos.forEach(url => deleteFileFromDrive(url));
       }
@@ -1017,11 +1018,16 @@
       document.getElementById('project-album-modal').classList.add('hidden'); 
     }
     
+    // 💡 여러 사진을 동시에 업로드하는 병렬 처리 (속도 개선)
     async function handleAlbumFilesSelect(input) {
       if (!input.files || input.files.length === 0) return;
       const icon = document.getElementById('icon-album-file'); const text = document.getElementById('text-album-file');
       icon.setAttribute('data-lucide', 'loader-2'); icon.classList.add('animate-spin'); text.innerText = "업로드 중..."; lucide.createIcons();
-      for (const file of Array.from(input.files)) { const url = await uploadImageToDrive(file); currentAlbumPhotos.push(url); }
+      
+      const promises = Array.from(input.files).map(file => uploadImageToDrive(file));
+      const urls = await Promise.all(promises);
+      currentAlbumPhotos.push(...urls.filter(Boolean));
+      
       renderAlbumPreviewGrid();
       icon.setAttribute('data-lucide', 'upload-cloud'); icon.classList.remove('animate-spin'); text.innerText = "기기에서 사진 선택"; lucide.createIcons();
       input.value = '';
@@ -1035,7 +1041,7 @@
         div.querySelector('button').onclick = () => { 
           const removedUrl = currentAlbumPhotos[idx];
           currentAlbumPhotos.splice(idx,1); 
-          deleteFileFromDrive(removedUrl); // 드라이브에서 즉시 삭제
+          deleteFileFromDrive(removedUrl); 
           renderAlbumPreviewGrid(); 
         }; 
         grid.appendChild(div);
@@ -1046,7 +1052,7 @@
       e.preventDefault();
       const newAlbum = { id: String(Date.now()), title: document.getElementById('album-title').value.trim(), category: document.getElementById('album-category').value, date: document.getElementById('album-date').value, desc: document.getElementById('album-desc').value.trim(), photos: [...currentAlbumPhotos] };
       appData.projectAlbums.unshift(newAlbum); 
-      currentAlbumPhotos = []; // 저장 성공했으므로 비워줌 (취소 시 안 지워지도록)
+      currentAlbumPhotos = []; 
       document.getElementById('project-album-modal').classList.add('hidden');
       renderGallery(); renderManagerAlbumList(); triggerAutoSync(); 
     }
@@ -1059,7 +1065,6 @@
     }
     
     function closeEditAlbumModal() { 
-      // 추가했다가 취소하면 임시 업로드 파일 삭제
       if (editNewPhotos && editNewPhotos.length > 0) {
         editNewPhotos.forEach(url => deleteFileFromDrive(url));
       }
@@ -1071,7 +1076,11 @@
       if (!input.files || input.files.length === 0) return;
       const icon = document.getElementById('icon-edit-file'); const text = document.getElementById('text-edit-file');
       icon.setAttribute('data-lucide', 'loader-2'); icon.classList.add('animate-spin'); text.innerText = "업로드 중..."; lucide.createIcons();
-      for (const file of Array.from(input.files)) { const url = await uploadImageToDrive(file); editNewPhotos.push(url); }
+      
+      const promises = Array.from(input.files).map(file => uploadImageToDrive(file));
+      const urls = await Promise.all(promises);
+      editNewPhotos.push(...urls.filter(Boolean));
+      
       renderEditAlbumGrid();
       icon.setAttribute('data-lucide', 'image-plus'); icon.classList.remove('animate-spin'); text.innerText = "기기에서 사진 선택 (자동 압축업로드)"; lucide.createIcons();
       input.value = '';
@@ -1092,7 +1101,7 @@
         div.querySelector('button').onclick = () => { 
           const removedUrl = editNewPhotos[i];
           editNewPhotos.splice(i,1); 
-          deleteFileFromDrive(removedUrl); // 취소 시 드라이브에서도 삭제
+          deleteFileFromDrive(removedUrl); 
           renderEditAlbumGrid(); 
         }; 
         newGrid.appendChild(div);
@@ -1102,12 +1111,11 @@
     function saveEditAlbumPhotos() {
       const album = appData.projectAlbums.find(a => a.id === activeEditAlbumId);
       if (album) { 
-        // 💡 최종 저장 시 기존 앨범에서 빠진 사진들을 찾아내 드라이브에서 완전히 지움
         const deletedPhotos = album.photos.filter(url => !stagedExistingPhotos.includes(url));
         deletedPhotos.forEach(url => deleteFileFromDrive(url));
 
         album.photos = [...stagedExistingPhotos, ...editNewPhotos]; 
-        editNewPhotos = []; // 저장 성공했으니 취소 로직 안타게 비움
+        editNewPhotos = []; 
         document.getElementById('edit-album-modal').classList.add('hidden');
         renderGallery(); renderManagerAlbumList(); alert('사진이 정상적으로 업데이트되었습니다!'); triggerAutoSync(); 
       }
@@ -1369,7 +1377,7 @@
     }
     function closeTaxInvoiceDetailModal() { document.getElementById('tax-invoice-detail-modal').classList.add('hidden'); }
 
-    // 💡 공사 전체 삭제 시 관련 문서 모두 드라이브에서 함께 삭제
+    // 💡 현장/앨범 삭제 시 구글 드라이브 원본 파일 연동 삭제
     function deleteProject(id) { 
       if(confirm('삭제하시겠습니까? (등록된 증빙 서류들도 구글 드라이브에서 함께 지워집니다)')) { 
         const proj = appData.projects.find(p => p.id === String(id));
@@ -1383,7 +1391,6 @@
       } 
     }
 
-    // 💡 앨범 삭제 시 관련 사진 모두 드라이브에서 함께 삭제
     function deleteProjectAlbum(id) { 
       if(confirm('앨범을 정말 삭제하시겠습니까? (등록된 사진들이 구글 드라이브에서 일괄 삭제됩니다)')) { 
         const album = appData.projectAlbums.find(a => a.id === String(id));
