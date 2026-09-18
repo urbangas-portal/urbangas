@@ -452,7 +452,6 @@
           </div>
         </div>
 
-        <!-- 정산 보드 -->
         <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-4">
           <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-100 pb-3 gap-3">
             <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
@@ -688,6 +687,7 @@
     let SECRET_PIN = localStorage.getItem('gwangjin_custom_pin') || "1270";
     const NO_IMAGE_PLACEHOLDER = "data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22600%22%20height%3D%22400%22%3E%3Crect%20fill%3D%22%23f1f5f9%22%20width%3D%22600%22%20height%3D%22400%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20text-anchor%3D%22middle%22%20font-size%3D%2218%22%20font-weight%3D%22bold%22%20fill%3D%22%23cbd5e1%22%3E%EB%93%B1%EB%A1%9D%EB%90%9C%20%EC%82%AC%EC%A7%84%20%EC%97%86%EC%9D%8C%3C%2Ftext%3E%3C%2Fsvg%3E";
 
+    // 💡 [필수] 구글 앱스 스크립트 웹 앱 URL을 아래 따옴표 안에 넣으세요!
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw6cPLtRQhYMGtjpLuKnpB6Z_tmUuZO2WA9lIZ9FJHHfiBzmuTxgU4gd6RjrHZvERdX/exec";
 
     async function deleteFileFromDrive(url) {
@@ -753,7 +753,7 @@
       }
     }
 
-    // 💡 메모리 뻗음 방지: 해상도를 1024로 맞추고 압축률 최적화
+    // 💡 이미지 압축 실패 차단 및 고속 처리 로직 (HEIC 포맷 안전 대응)
     async function uploadImageToDrive(fileOrBlob) {
       return new Promise((resolve) => {
         const reader = new FileReader();
@@ -766,22 +766,33 @@
             canvas.width = w; canvas.height = h;
             const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, w, h);
             
-            const base64Data = canvas.toDataURL('image/jpeg', 0.6).split(',')[1]; 
+            // 데이터 먼저 빼두고 캔버스 메모리 즉시 반환 (하얗게 깨짐 방지)
+            const base64Full = canvas.toDataURL('image/jpeg', 0.6); 
+            const base64Data = base64Full.split(',')[1];
             
-            // 💡 캔버스 및 이미지 메모리 즉각 해제 (OOM 방지)
-            img.src = "";
-            canvas.width = 0; canvas.height = 0;
-
+            img.src = ""; canvas.width = 0; canvas.height = 0;
+            
             if (GOOGLE_SCRIPT_URL && !GOOGLE_SCRIPT_URL.includes("여기에")) {
               try {
                 const res = await fetch(GOOGLE_SCRIPT_URL, { method: "POST", body: JSON.stringify({ action: "uploadImage", fileName: `photo_${Date.now()}.jpg`, contentType: "image/jpeg", base64Data: base64Data }) });
                 const resJson = await res.json();
                 if (resJson.status === "success") { resolve(resJson.url); return; }
-              } catch (e) { resolve(null); }
+              } catch (err) { resolve(base64Full); return; }
+            }
+            resolve(base64Full);
+          };
+          img.onerror = async () => { 
+            // 💡 HEIC 파일 등 이미지 압축에 실패했을 때 원본 그대로 안전하게 업로드하는 방어 코드
+            const rawBase64 = e.target.result.split(',')[1];
+            if (GOOGLE_SCRIPT_URL && !GOOGLE_SCRIPT_URL.includes("여기에")) {
+              try {
+                const res = await fetch(GOOGLE_SCRIPT_URL, { method: "POST", body: JSON.stringify({ action: "uploadImage", fileName: fileOrBlob.name || `photo_${Date.now()}.jpg`, contentType: fileOrBlob.type || "application/octet-stream", base64Data: rawBase64 }) });
+                const resJson = await res.json();
+                if (resJson.status === "success") { resolve(resJson.url); return; }
+              } catch (err) {}
             }
             resolve(null);
           };
-          img.onerror = () => { resolve(null); }; // 에러 시 무한 대기 방지
           img.src = e.target.result;
         };
         reader.readAsDataURL(fileOrBlob);
@@ -825,7 +836,6 @@
       input.value = '';
     }
 
-    // 💡 계약서 다중 업로드 (순차 고속 처리 적용 완료)
     async function uploadMultiDocuments(input, listKey) {
       if (!input.files || input.files.length === 0) return;
       const proj = appData.projects.find(p => p.id === activeDetailProjectId); if (!proj) return;
@@ -848,10 +858,8 @@
           if (file.type === "application/pdf" || file.name.toLowerCase().endsWith('.pdf')) { 
             imageFile = await convertPdfToImage(file); 
           }
-          const url = await uploadImageToDrive(imageFile); // 메모리 보호용 순차 업로드!
-          if (url) {
-            proj[listKey].push(url);
-          }
+          const url = await uploadImageToDrive(imageFile); 
+          if (url) { proj[listKey].push(url); }
         } catch(e) {}
       }
       
@@ -1035,7 +1043,7 @@
       document.getElementById('project-album-modal').classList.add('hidden'); 
     }
     
-    // 💡 앨범 여러 장 사진 업로드 - 순차 실시간 처리로 브라우저 메모리 에러 해결
+    // 💡 앨범 여러 장 사진 업로드 - 순차 실시간 처리
     async function handleAlbumFilesSelect(input) {
       if (!input.files || input.files.length === 0) return;
       const icon = document.getElementById('icon-album-file'); const text = document.getElementById('text-album-file');
@@ -1044,14 +1052,13 @@
       const total = input.files.length;
       let count = 0;
       
-      // 순차적으로 1개씩 기다렸다가 올리고 화면에 즉시 그려줍니다. 메모리가 과열되지 않습니다.
       for (const file of Array.from(input.files)) {
         count++;
         text.innerText = `사진 서버에 저장 중... (${count}/${total})`;
         const url = await uploadImageToDrive(file);
         if (url) {
           currentAlbumPhotos.push(url);
-          renderAlbumPreviewGrid(); // 💡 한 장이 처리될 때마다 화면에 즉각 표시
+          renderAlbumPreviewGrid(); 
         }
       }
       
@@ -1110,10 +1117,10 @@
       for (const file of Array.from(input.files)) {
         count++;
         text.innerText = `사진 추가 중... (${count}/${total})`;
-        const url = await uploadImageToDrive(file); // 순차 업로드
+        const url = await uploadImageToDrive(file); 
         if (url) {
           editNewPhotos.push(url);
-          renderEditAlbumGrid(); // 즉각 렌더링
+          renderEditAlbumGrid(); 
         }
       }
       
@@ -1411,38 +1418,6 @@
       document.getElementById('tax-invoice-detail-modal').classList.remove('hidden');
     }
     function closeTaxInvoiceDetailModal() { document.getElementById('tax-invoice-detail-modal').classList.add('hidden'); }
-
-    // 💡 현장/앨범 삭제 시 구글 드라이브 원본 파일 연동 삭제
-    function deleteProject(id) { 
-      if(confirm('삭제하시겠습니까? (등록된 증빙 서류들도 구글 드라이브에서 함께 지워집니다)')) { 
-        const proj = appData.projects.find(p => p.id === String(id));
-        if (proj) {
-          if (proj.bizLicense) deleteFileFromDrive(proj.bizLicense);
-          if (proj.contractDoc) deleteFileFromDrive(proj.contractDoc);
-          if (proj.contractDocsList) proj.contractDocsList.forEach(url => deleteFileFromDrive(url));
-        }
-        appData.projects = appData.projects.filter(p => p.id !== String(id)); 
-        renderProjects(); triggerAutoSync(); 
-      } 
-    }
-
-    function deleteProjectAlbum(id) { 
-      if(confirm('앨범을 정말 삭제하시겠습니까? (등록된 사진들이 구글 드라이브에서 일괄 삭제됩니다)')) { 
-        const album = appData.projectAlbums.find(a => a.id === String(id));
-        if(album && album.photos) {
-            album.photos.forEach(url => deleteFileFromDrive(url));
-        }
-        appData.projectAlbums = appData.projectAlbums.filter(a => a.id !== String(id)); 
-        renderGallery(); renderManagerAlbumList(); triggerAutoSync(); 
-      } 
-    }
-
-    function deleteTaxInvoice(id) { 
-      if(confirm('기록을 삭제할까요?')) { 
-        appData.taxInvoices = appData.taxInvoices.filter(i => i.id !== id); 
-        renderTaxInvoiceList(); triggerAutoSync(); 
-      } 
-    }
 
     function switchTab(t) {
       ['project', 'photos', 'tax'].forEach(tab => {
