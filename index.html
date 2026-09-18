@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+https://gemini.google.com/notebooks/create<!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
@@ -8,30 +8,9 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
 
-  <!-- [Firebase 실시간 동기화 라이브러리 연동] -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
-    // 💡 [필수] 본인의 파이어베이스 설정값을 아래에 입력하세요!
-    const firebaseConfig = {
-      apiKey: "AIzaSyCrbly1TH9QZvkYdxy6DjREUwHj_dxymoU",
-      authDomain: "urbangas-portal.firebaseapp.com",
-      projectId: "urbangas-portal",
-      storageBucket: "urbangas-portal.firebasestorage.app",
-      messagingSenderId: "440039081574",
-      appId: "1:440039081574:web:1f0551ddc5c3f93e0b0fa7"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-
-    window.fbDb = db;
-    window.fbDoc = doc;
-    window.fbGetDoc = getDoc;
-    window.fbSetDoc = setDoc;
-    window.isFirebaseReady = true;
-  </script>
+  <!-- [해결됨] 로컬 파일 실행 시 차단되지 않는 파이어베이스 호환(Compat) 라이브러리 사용 -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
   <script>
     tailwind.config = {
@@ -170,11 +149,11 @@
           <p class="text-2xl sm:text-3xl font-black text-slate-900">원칙과 안전을 지키는 5단계 시공 공정</p>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200"><span class="text-4xl font-black text-slate-200">01</span><h4 class="text-base font-bold text-slate-800 mt-2 mb-2">현장실측 & 인허가 신청</h4><p class="text-xs text-slate-500">배관 루트 실측 및 소비량 계산</p></div>
-          <div class="p-5 rounded-2xl bg-skybrand-50 border border-skybrand-200"><span class="text-4xl font-black text-skybrand-200">02</span><h4 class="text-base font-bold text-skybrand-800 mt-2 mb-2">견적 및 계약</h4><p class="text-xs text-skybrand-600">상세 견적 안내 및 시공 계약 체결</p></div>
-          <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200"><span class="text-4xl font-black text-slate-200">03</span><h4 class="text-base font-bold text-slate-800 mt-2 mb-2">내부 및 외부 시공</h4><p class="text-xs text-slate-500">실내외 강관 정밀 배관 시공</p></div>
-          <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200"><span class="text-4xl font-black text-slate-200">04</span><h4 class="text-base font-bold text-slate-800 mt-2 mb-2">기밀시험(압력테스트)</h4><p class="text-xs text-slate-500">KGS 규정 미세 누출 검증</p></div>
-          <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200"><span class="text-4xl font-black text-slate-200">05</span><h4 class="text-base font-bold text-slate-800 mt-2 mb-2">완성검사 & 가스공급</h4><p class="text-xs text-slate-500">검사 합격 후 안전 개통</p></div>
+          <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200"><span class="text-4xl font-black text-slate-200">01</span><h4 class="text-base font-bold text-slate-800 mt-2 mb-2">현장실측 & 인허가 신청</h4></div>
+          <div class="p-5 rounded-2xl bg-skybrand-50 border border-skybrand-200"><span class="text-4xl font-black text-skybrand-200">02</span><h4 class="text-base font-bold text-skybrand-800 mt-2 mb-2">견적 및 계약</h4></div>
+          <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200"><span class="text-4xl font-black text-slate-200">03</span><h4 class="text-base font-bold text-slate-800 mt-2 mb-2">내부 및 외부 시공</h4></div>
+          <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200"><span class="text-4xl font-black text-slate-200">04</span><h4 class="text-base font-bold text-slate-800 mt-2 mb-2">기밀시험(압력테스트)</h4></div>
+          <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200"><span class="text-4xl font-black text-slate-200">05</span><h4 class="text-base font-bold text-slate-800 mt-2 mb-2">완성검사 & 가스공급</h4></div>
         </div>
       </div>
     </section>
@@ -184,16 +163,24 @@
   <section id="view-manager" class="hidden flex-grow bg-slate-100 py-8">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       
+      <!-- 상단 상태/동기화 바 -->
       <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div class="flex flex-wrap items-center gap-2 mb-2">
             <span class="px-3 py-1 bg-skybrand-100 text-skybrand-700 text-xs font-bold rounded-lg border">광진유한회사 기술시공본부</span>
-            <span class="px-3 py-0.5 rounded-full text-[11px] font-black bg-emerald-100 text-emerald-700 border border-emerald-400">☁️ Firebase 실시간 클라우드 연동중</span>
+            <!-- 상태 뱃지 (파이어베이스/로컬 자동 전환) -->
+            <span id="sync-cloud-badge" class="px-3 py-0.5 rounded-full text-[11px] font-black bg-slate-100 text-slate-500 border border-slate-300">
+              안전 로컬 모드 작동중
+            </span>
           </div>
           <h2 class="text-2xl font-black text-slate-900">강희성 부장 현장 총괄 관제실</h2>
         </div>
         <div class="flex items-center gap-2">
-          <button onclick="manualCloudSync()" class="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl font-bold text-xs shadow-sm"><i data-lucide="cloud-sync" class="w-4 h-4"></i><span>클라우드 동기화 새로고침</span></button>
+          <!-- 수동 로드(폴더 연동 대체) / 클라우드 갱신 통합 버튼 -->
+          <button id="btn-manual-sync" onclick="document.getElementById('import-file-input').click()" class="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl font-bold text-xs shadow-sm"><i data-lucide="folder-open" class="w-4 h-4"></i><span>수동 백업 불러오기</span></button>
+          <input type="file" id="import-file-input" accept=".json" onchange="importDataFromFile(this)" class="hidden">
+          
+          <button onclick="pickSyncFolder()" class="flex items-center gap-1.5 bg-sky-600 hover:bg-sky-700 text-white px-4 py-2.5 rounded-xl font-bold text-xs"><i data-lucide="folder-sync" class="w-4 h-4"></i><span id="sync-btn-label">저장 폴더 지정</span></button>
           <button onclick="logoutManagerMode()" class="flex items-center gap-1.5 bg-slate-800 text-white px-4 py-2.5 rounded-xl font-bold text-xs"><i data-lucide="log-out" class="w-4 h-4"></i><span>관제실 종료</span></button>
         </div>
       </div>
@@ -245,7 +232,6 @@
           </table>
         </div>
       </div>
-
     </div>
   </section>
 
@@ -308,8 +294,7 @@
         <div>
           <label class="block font-bold mb-1">사진 첨부</label>
           <div class="border-2 border-dashed border-skybrand-200 rounded-xl p-3 text-center bg-skybrand-50/50 cursor-pointer" onclick="document.getElementById('album-file-input').click()">
-            <input type="file" id="album-file-input" accept="image/*" multiple onchange="handleAlbumFilesSelect(this)" class="hidden">
-            <p class="font-bold text-xs">사진 선택</p>
+            <input type="file" id="album-file-input" accept="image/*" multiple onchange="handleAlbumFilesSelect(this)" class="hidden"><i data-lucide="upload-cloud" class="w-6 h-6 text-skybrand-500 mx-auto mb-1"></i><p class="font-bold text-xs">사진 선택</p>
           </div>
           <div id="album-preview-grid" class="grid grid-cols-4 gap-2 mt-2 max-h-32 overflow-y-auto p-1"></div>
         </div>
@@ -330,8 +315,8 @@
       </div>
       <div class="p-6 overflow-y-auto space-y-6 flex-grow text-xs sm:text-sm">
         <div class="grid grid-cols-2 gap-4 bg-skybrand-50/60 p-4 rounded-2xl border">
-          <div><span class="text-[11px] font-bold text-skybrand-700 block">공급받는자</span><div id="detail-client" class="font-black"></div></div>
-          <div><span class="text-[11px] font-bold text-slate-500 block">발주처</span><div id="detail-owner" class="font-black"></div></div>
+          <div><span class="text-[11px] font-bold text-skybrand-700 block">■ 공급받는자</span><div id="detail-client" class="font-black"></div></div>
+          <div><span class="text-[11px] font-bold text-slate-500 block">■ 발주처</span><div id="detail-owner" class="font-black"></div></div>
         </div>
         <div class="bg-white rounded-2xl p-5 border shadow-sm space-y-4">
           <h4 class="font-black text-sm">금액 정산</h4>
@@ -346,7 +331,7 @@
     </div>
   </div>
 
-  <!-- [사진 관리 통합 모달] -->
+  <!-- [사진 관리 통합 편집기 모달] -->
   <div id="edit-album-modal" class="fixed inset-0 z-[60] bg-slate-900/60 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl p-6 max-w-2xl w-full border shadow-2xl overflow-y-auto max-h-[92vh]">
       <div class="flex justify-between items-center mb-4 pb-2 border-b"><h3 class="text-base font-black">사진 통합 관리</h3><button onclick="closeEditAlbumModal()"><i data-lucide="x" class="w-5 h-5"></i></button></div>
@@ -358,7 +343,7 @@
     </div>
   </div>
 
-  <!-- [세금계산서 프롬프트 및 인쇄 모달 생략(동일유지)] -->
+  <!-- [세금계산서 프롬프트 및 인쇄 모달] -->
   <div id="tax-issue-prompt-modal" class="fixed inset-0 z-[60] bg-slate-900/70 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl p-6 max-w-sm w-full border shadow-2xl">
       <h3 class="text-lg font-black mb-2">세금계산서 발행</h3>
@@ -386,6 +371,22 @@
     </div>
   </div>
 
+  <!-- [세금계산서 내역 팝업] -->
+  <div id="tax-invoice-detail-modal" class="fixed inset-0 z-[60] bg-slate-900/70 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl p-6 max-w-md w-full border shadow-2xl">
+      <div class="flex justify-between items-center mb-4 border-b pb-3"><h3 class="text-lg font-black">발행 상세 내역</h3><button onclick="closeTaxInvoiceDetailModal()"><i data-lucide="x" class="w-5 h-5 text-slate-400"></i></button></div>
+      <div class="space-y-3 text-sm">
+        <div><span class="text-xs font-bold text-slate-500">공사명</span><div id="tax-det-title" class="font-bold"></div></div>
+        <div class="bg-slate-50 p-3 rounded-xl border space-y-1 text-xs">
+          <div class="flex justify-between"><span>공급가액</span><span id="tax-det-supply" class="font-bold"></span></div>
+          <div class="flex justify-between"><span>세액</span><span id="tax-det-vat" class="font-bold"></span></div>
+          <div class="flex justify-between text-rose-600 font-black border-t pt-2"><span>잔금</span><span id="tax-det-bal"></span></div>
+        </div>
+      </div>
+      <button onclick="closeTaxInvoiceDetailModal()" class="w-full mt-5 py-2.5 bg-slate-100 rounded-xl font-bold">확인</button>
+    </div>
+  </div>
+
   <!-- 라이트박스 -->
   <div id="lightbox-modal" class="fixed inset-0 z-[70] bg-slate-950/90 hidden flex items-center justify-center p-4">
     <div class="max-w-4xl w-full bg-slate-900 rounded-3xl overflow-hidden shadow-2xl flex flex-col relative text-white">
@@ -397,71 +398,146 @@
 
   <script>
     /* =========================================================
-       Firebase 클라우드 동기화 스크립트
+       JavaScript 로직 (로컬 + Firebase 보호 처리)
        ========================================================= */
     const SECRET_PIN = "1270";
     const NO_IMAGE_PLACEHOLDER = "data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22600%22%20height%3D%22400%22%3E%3Crect%20fill%3D%22%23f1f5f9%22%20width%3D%22600%22%20height%3D%22400%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20text-anchor%3D%22middle%22%20font-size%3D%2218%22%20font-weight%3D%22bold%22%20fill%3D%22%23cbd5e1%22%3E%EB%93%B1%EB%A1%9D%EB%90%9C%20%EC%82%AC%EC%A7%84%20%EC%97%86%EC%9D%8C%3C%2Ftext%3E%3C%2Fsvg%3E";
 
+    // 💡 [Firebase 설정] 나중에 Firebase 콘솔에서 발급받은 본인 키로 변경하세요!
+    const firebaseConfig = {
+      apiKey: "AIzaSyCrbly1TH9QZvkYdxy6DjREUwHj_dxymoU",
+      authDomain: "urbangas-portal.firebaseapp.com",
+      projectId: "urbangas-portal",
+      storageBucket: "urbangas-portal.firebasestorage.app",
+      messagingSenderId: "440039081574",
+      appId: "1:440039081574:web:1f0551ddc5c3f93e0b0fa7"
+    };
+
+    let fbDb = null;
+    let isFirebaseReady = false;
+
+    // 파이어베이스 초기화 (오류 방지 보호)
+    try {
+      if (typeof firebase !== 'undefined' && firebaseConfig.apiKey !== "YOUR_API_KEY") {
+        firebase.initializeApp(firebaseConfig);
+        fbDb = firebase.firestore();
+        isFirebaseReady = true;
+      }
+    } catch(e) {
+      console.warn("Firebase 초기화 에러:", e);
+    }
+
+    // --- 데이터 모델 ---
     let appData = {
       projects: JSON.parse(localStorage.getItem('gwangjin_projects')) || [],
       projectAlbums: JSON.parse(localStorage.getItem('gwangjin_project_albums')) || [{
-        id: "1", title: "옥련동 단독주택 보일러 배관 신설 공사", category: "가정용", date: "2026-09-12", desc: "기밀시험 완료", photos: []
+        id: "1", title: "옥련동 단독주택 보일러 배관 신설", category: "가정용", date: "2026-09-12", photos: []
       }],
       taxInvoices: JSON.parse(localStorage.getItem('gwangjin_tax_invoices')) || []
     };
 
-    // Firebase에 데이터 저장
+    // --- 동기화 및 백업 (로컬 및 클라우드 병행) ---
+    let syncDirectoryHandle = null;
     async function triggerAutoSync() {
-      try {
-        localStorage.setItem('gwangjin_projects', JSON.stringify(appData.projects));
-        localStorage.setItem('gwangjin_project_albums', JSON.stringify(appData.projectAlbums));
-        localStorage.setItem('gwangjin_tax_invoices', JSON.stringify(appData.taxInvoices));
+      // 1. 브라우저 저장소
+      localStorage.setItem('gwangjin_projects', JSON.stringify(appData.projects));
+      localStorage.setItem('gwangjin_project_albums', JSON.stringify(appData.projectAlbums));
+      localStorage.setItem('gwangjin_tax_invoices', JSON.stringify(appData.taxInvoices));
 
-        if (window.isFirebaseReady) {
-          const docRef = window.fbDoc(window.fbDb, "gwangjin", "portal_data");
-          await window.fbSetDoc(docRef, appData);
-        }
-      } catch (err) { console.error("동기화 오류:", err); }
+      // 2. 파일 폴더 연동
+      if (syncDirectoryHandle) {
+        try {
+          const fileHandle = await syncDirectoryHandle.getFileHandle("gwangjin_data.json", { create: true });
+          const writable = await fileHandle.createWritable();
+          await writable.write(JSON.stringify(appData, null, 2));
+          await writable.close();
+        } catch (err) {}
+      }
+
+      // 3. 파이어베이스(연결 시)
+      if (isFirebaseReady && fbDb) {
+        try {
+          await fbDb.collection("gwangjin").doc("portal_data").set(appData);
+        } catch (err) { console.warn("클라우드 저장 실패", err); }
+      }
     }
 
-    // Firebase에서 최신 데이터 불러오기
+    // 수동 클라우드 동기화 
     async function manualCloudSync() {
-      if (!window.isFirebaseReady) { alert('파이어베이스가 연결되지 않았습니다.'); return; }
+      if (!isFirebaseReady) {
+        document.getElementById('import-file-input').click(); // 로컬 파일 불러오기 창 띄우기
+        return;
+      }
       try {
-        const docRef = window.fbDoc(window.fbDb, "gwangjin", "portal_data");
-        const docSnap = await window.fbGetDoc(docRef);
-        if (docSnap.exists()) {
-          appData = docSnap.data();
-          localStorage.setItem('gwangjin_projects', JSON.stringify(appData.projects));
-          localStorage.setItem('gwangjin_project_albums', JSON.stringify(appData.projectAlbums));
-          localStorage.setItem('gwangjin_tax_invoices', JSON.stringify(appData.taxInvoices));
+        const doc = await fbDb.collection("gwangjin").doc("portal_data").get();
+        if (doc.exists) {
+          const cloudData = doc.data();
+          if (cloudData.projects) appData.projects = cloudData.projects;
+          if (cloudData.projectAlbums) appData.projectAlbums = cloudData.projectAlbums;
+          if (cloudData.taxInvoices) appData.taxInvoices = cloudData.taxInvoices;
+          await triggerAutoSync();
           renderGallery(); renderManagerAlbumList(); renderProjects(); renderTaxInvoiceList();
-          alert('클라우드에서 최신 데이터를 성공적으로 불러왔습니다!');
+          alert('클라우드에서 최신 데이터를 불러왔습니다!');
         } else {
-          alert('클라우드에 저장된 데이터가 없어 현재 데이터를 업로드합니다.');
+          alert('클라우드에 저장된 데이터가 없습니다. 현재 자료를 업로드합니다.');
           await triggerAutoSync();
         }
-      } catch (e) { alert('동기화 실패: ' + e.message); }
+      } catch(e) { alert('동기화 실패: 설정값을 확인하세요.'); }
     }
 
+    function importDataFromFile(input) {
+      if (!input.files || input.files.length === 0) return;
+      const reader = new FileReader();
+      reader.onload = async function(e) {
+        try {
+          const imported = JSON.parse(e.target.result);
+          if (imported.projects) appData.projects = imported.projects;
+          if (imported.projectAlbums) appData.projectAlbums = imported.projectAlbums;
+          if (imported.taxInvoices) appData.taxInvoices = imported.taxInvoices;
+          await triggerAutoSync();
+          renderGallery(); renderManagerAlbumList(); renderProjects(); renderTaxInvoiceList();
+          alert('수동 백업 자료를 불러왔습니다!');
+        } catch (err) { alert('파일 읽기 오류'); }
+        input.value = '';
+      };
+      reader.readAsText(input.files[0]);
+    }
+
+    async function pickSyncFolder() {
+      if (!window.showDirectoryPicker) return alert('현재 브라우저에서는 폴더 연동을 지원하지 않습니다.');
+      try {
+        syncDirectoryHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+        document.getElementById('sync-folder-path').innerText = `📂 연동 폴더: [${syncDirectoryHandle.name}]`;
+        document.getElementById('sync-folder-path').classList.remove('hidden');
+        await triggerAutoSync();
+        alert(`[${syncDirectoryHandle.name}] 폴더가 연동되었습니다.`);
+      } catch (e) {}
+    }
+
+    // --- 로그인 로직 ---
+    function openPasswordModal() {
+      document.getElementById('password-modal').classList.remove('hidden');
+      document.getElementById('password-error').classList.add('hidden');
+    }
+    function closePasswordModal() { document.getElementById('password-modal').classList.add('hidden'); }
+    
     async function verifyPassword() {
       if (document.getElementById('manager-password-input').value === SECRET_PIN) {
         closePasswordModal();
         document.getElementById('view-public').classList.add('hidden');
         document.getElementById('view-manager').classList.remove('hidden');
 
-        // 관제실 진입 시 자동 클라우드 데이터 로드 시도
-        if (window.isFirebaseReady) {
-          try {
-            const docRef = window.fbDoc(window.fbDb, "gwangjin", "portal_data");
-            const docSnap = await window.fbGetDoc(docRef);
-            if (docSnap.exists()) {
-              appData = docSnap.data();
-              localStorage.setItem('gwangjin_projects', JSON.stringify(appData.projects));
-              localStorage.setItem('gwangjin_project_albums', JSON.stringify(appData.projectAlbums));
-              localStorage.setItem('gwangjin_tax_invoices', JSON.stringify(appData.taxInvoices));
-            }
-          } catch(e) {}
+        // 상태 뱃지 UI 업데이트
+        const badge = document.getElementById('sync-cloud-badge');
+        const syncBtn = document.getElementById('btn-manual-sync');
+        if (isFirebaseReady) {
+          badge.innerText = "☁️ Firebase 실시간 동기화 활성";
+          badge.className = "px-3 py-0.5 rounded-full text-[11px] font-black bg-emerald-100 text-emerald-700 border border-emerald-400";
+          syncBtn.innerHTML = `<i data-lucide="cloud-sync" class="w-4 h-4"></i><span>☁️ 클라우드 수동 갱신</span>`;
+          manualCloudSync(); // 진입 시 자동 클라우드 로드
+        } else {
+          badge.innerText = "⚙️ 클라우드 설정 대기중 (로컬 모드)";
+          badge.className = "px-3 py-0.5 rounded-full text-[11px] font-black bg-amber-100 text-amber-700 border border-amber-400";
         }
 
         renderManagerAlbumList(); renderProjects(); renderTaxInvoiceList();
@@ -474,15 +550,16 @@
     function logoutManagerMode() {
       document.getElementById('view-manager').classList.add('hidden');
       document.getElementById('view-public').classList.remove('hidden');
-      filterGallery(currentFilter);
+      filterGallery(currentFilter); // 메인 강제 새로고침
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
+    // --- 갤러리 로직 ---
     let currentFilter = '전체';
     function filterGallery(cat) {
       currentFilter = cat;
-      document.querySelectorAll('.gallery-filter-btn').forEach(b => b.className = "gallery-filter-btn px-4 py-2 rounded-xl bg-slate-200 text-slate-600 transition-all whitespace-nowrap");
-      document.getElementById(`filter-btn-${cat}`).className = "gallery-filter-btn px-4 py-2 rounded-xl bg-skybrand-600 text-white transition-all whitespace-nowrap";
+      document.querySelectorAll('.gallery-filter-btn').forEach(b => b.className = "gallery-filter-btn px-4 py-2 rounded-xl bg-slate-200 text-slate-600 transition-all");
+      document.getElementById(`filter-btn-${cat}`).className = "gallery-filter-btn px-4 py-2 rounded-xl bg-skybrand-600 text-white transition-all";
       renderGallery();
     }
 
@@ -497,29 +574,23 @@
       filtered.forEach(album => {
         let badgeColor = "bg-skybrand-100 text-skybrand-700";
         if (album.category === '가정용') badgeColor = "bg-blue-100 text-blue-700";
-        if (album.category === '상가/빌딩') badgeColor = "bg-skybrand-100 text-skybrand-700";
 
         const photoCount = album.photos && album.photos.length > 0 ? album.photos.length : 0;
         const thumb = photoCount > 0 ? album.photos[0] : NO_IMAGE_PLACEHOLDER;
-        const div = document.createElement('div');
-        div.className = "bg-white rounded-2xl overflow-hidden border shadow-sm hover:shadow-md transition-all flex flex-col justify-between cursor-pointer group";
-        div.onclick = () => openLightbox(album.id);
-
-        div.innerHTML = `
-          <div>
+        
+        grid.innerHTML += `
+          <div class="bg-white rounded-2xl overflow-hidden border shadow-sm hover:shadow-md transition-all cursor-pointer group" onclick="openLightbox('${album.id}')">
             <div class="h-52 bg-slate-100 overflow-hidden relative flex items-center justify-center">
               <img src="${thumb}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
-              <span class="absolute top-3 left-3 text-[10px] font-bold px-2.5 py-1 rounded-lg ${badgeColor}">${album.category}</span>
+              <span class="absolute top-3 left-3 text-[10px] font-bold px-2.5 py-1 rounded-lg ${badgeColor} shadow-sm">${album.category}</span>
               <span class="absolute bottom-3 right-3 text-[11px] font-bold px-2.5 py-1 rounded-lg bg-black/70 text-white flex items-center gap-1"><i data-lucide="images" class="w-3.5 h-3.5"></i><span>총 ${photoCount}장</span></span>
             </div>
             <div class="p-5">
               <div class="text-xs text-slate-400 mb-1.5">${album.date || ''}</div>
               <h4 class="font-bold text-slate-900 text-base leading-snug group-hover:text-skybrand-600">${album.title}</h4>
-              <p class="text-xs text-slate-500 mt-2 leading-relaxed line-clamp-2">${album.desc || ''}</p>
             </div>
           </div>
         `;
-        grid.appendChild(div);
       });
       lucide.createIcons();
     }
@@ -529,204 +600,162 @@
       if (!container) return;
       container.innerHTML = '';
       if (!appData.projectAlbums || appData.projectAlbums.length === 0) {
-        container.innerHTML = `<div class="p-8 text-center bg-slate-50 rounded-2xl border text-slate-400 text-xs">등록된 앨범이 없습니다.</div>`; return;
+        container.innerHTML = `<div class="p-8 text-center text-slate-400 text-xs">등록된 앨범이 없습니다.</div>`; return;
       }
-
       appData.projectAlbums.forEach(album => {
         const photoCount = album.photos && album.photos.length > 0 ? album.photos.length : 0;
         const thumb = photoCount > 0 ? album.photos[0] : NO_IMAGE_PLACEHOLDER;
-        const albumIdStr = String(album.id);
-        const div = document.createElement('div');
-        div.className = "bg-slate-50 rounded-2xl p-4 border flex flex-col gap-3 cursor-pointer hover:border-skybrand-300";
-        div.onclick = () => openEditAlbumModal(albumIdStr);
         
-        div.innerHTML = `
-          <div class="flex items-center justify-between gap-3 pb-3 border-b">
-            <div class="flex items-center gap-3.5 min-w-0">
-              <img src="${thumb}" class="w-14 h-14 rounded-xl object-cover bg-slate-200 shrink-0 border">
-              <div class="min-w-0">
-                <div class="flex items-center gap-2"><span class="text-[10px] font-bold px-2 py-0.5 rounded bg-skybrand-100 text-skybrand-700">${album.category}</span><span class="text-xs font-bold text-skybrand-600">📷 사진 ${photoCount}장</span></div>
-                <h5 class="text-sm font-bold text-slate-900 truncate mt-1">${album.title}</h5>
-              </div>
+        container.innerHTML += `
+          <div class="bg-slate-50 rounded-2xl p-4 border flex justify-between items-center cursor-pointer hover:border-skybrand-300 transition-colors" onclick="openEditAlbumModal('${album.id}')">
+            <div class="flex items-center gap-3.5">
+              <img src="${thumb}" class="w-14 h-14 rounded-xl object-cover border">
+              <div><span class="text-[10px] font-bold px-2 py-0.5 bg-skybrand-100 text-skybrand-700 rounded">${album.category}</span><span class="text-xs font-bold text-skybrand-600 ml-2">📷 ${photoCount}장</span><h5 class="text-sm font-bold text-slate-900 mt-1">${album.title}</h5></div>
             </div>
-            <div class="flex items-center gap-2 shrink-0">
-              <button onclick="event.stopPropagation(); openEditAlbumModal('${albumIdStr}')" class="px-3 py-1.5 bg-skybrand-600 text-white rounded-xl text-xs font-bold">사진 관리</button>
-              <button onclick="event.stopPropagation(); deleteProjectAlbum('${albumIdStr}')" class="px-2.5 py-1.5 bg-rose-50 text-rose-600 border border-rose-200 rounded-xl text-xs font-bold">삭제</button>
-            </div>
+            <div class="flex gap-2"><button onclick="event.stopPropagation(); deleteProjectAlbum('${album.id}')" class="px-3 py-1.5 bg-rose-50 text-rose-600 rounded-xl text-xs font-bold">삭제</button></div>
           </div>
         `;
-        container.appendChild(div);
       });
-      lucide.createIcons();
     }
 
-    // 앨범 등록/수정 모달 로직
-    let currentAlbumPhotos = [];
-    function openAddProjectAlbumModal() {
-      document.getElementById('project-album-modal').classList.remove('hidden');
-      document.getElementById('album-date').valueAsDate = new Date();
-      document.getElementById('album-title').value = '';
-      document.getElementById('album-desc').value = '';
-      currentAlbumPhotos = []; renderAlbumPreviewGrid();
-    }
-    function closeAddProjectAlbumModal() { document.getElementById('project-album-modal').classList.add('hidden'); }
-    function handleAlbumFilesSelect(input) {
-      if (!input.files) return;
-      Array.from(input.files).forEach(file => {
-        const reader = new FileReader();
-        reader.onload = e => { currentAlbumPhotos.push(e.target.result); renderAlbumPreviewGrid(); };
-        reader.readAsDataURL(file);
-      });
-      input.value = '';
-    }
-    function renderAlbumPreviewGrid() {
-      const grid = document.getElementById('album-preview-grid'); grid.innerHTML = '';
-      document.getElementById('album-photo-count').innerText = `${currentAlbumPhotos.length}장`;
-      currentAlbumPhotos.forEach((src, idx) => {
-        grid.innerHTML += `<div class="relative h-16 rounded-lg overflow-hidden border"><img src="${src}" class="w-full h-full object-cover"><button type="button" onclick="currentAlbumPhotos.splice(${idx},1);renderAlbumPreviewGrid();" class="absolute top-1 right-1 w-4 h-4 rounded-full bg-rose-600 text-white text-[10px]">×</button></div>`;
-      });
-    }
-    async function handleProjectAlbumSubmit(e) {
-      e.preventDefault();
-      const newAlbum = {
-        id: String(Date.now()), title: document.getElementById('album-title').value.trim(),
-        category: document.getElementById('album-category').value, date: document.getElementById('album-date').value,
-        desc: document.getElementById('album-desc').value.trim(), photos: [...currentAlbumPhotos]
-      };
-      appData.projectAlbums.unshift(newAlbum);
-      closeAddProjectAlbumModal(); await triggerAutoSync();
-      renderGallery(); renderManagerAlbumList(); alert('앨범이 등록되었습니다.');
-    }
-
-    let activeEditAlbumId = null;
-    let stagedExistingPhotos = [];
-    let editNewPhotos = [];
-    function openEditAlbumModal(albumId) {
-      activeEditAlbumId = String(albumId);
-      const album = appData.projectAlbums.find(a => String(a.id) === activeEditAlbumId);
+    // --- 통합 편집 툴 ---
+    let activeEditAlbumId = null, stagedExistingPhotos = [], editNewPhotos = [];
+    function openEditAlbumModal(id) {
+      activeEditAlbumId = String(id);
+      const album = appData.projectAlbums.find(a => a.id === activeEditAlbumId);
       if (!album) return;
+      document.getElementById('edit-modal-title').innerText = `[공사명] ${album.title}`;
       stagedExistingPhotos = album.photos ? [...album.photos] : [];
       editNewPhotos = [];
-      renderEditAlbumGrid();
-      document.getElementById('edit-album-modal').classList.remove('hidden');
+      renderEditAlbumGrid(); document.getElementById('edit-album-modal').classList.remove('hidden');
     }
-    function closeEditAlbumModal() { document.getElementById('edit-album-modal').classList.add('hidden'); activeEditAlbumId = null; }
+    function closeEditAlbumModal() { document.getElementById('edit-album-modal').classList.add('hidden'); }
     function handleEditFilesSelect(input) {
       if (!input.files) return;
-      Array.from(input.files).forEach(file => {
-        const reader = new FileReader();
-        reader.onload = e => { editNewPhotos.push(e.target.result); renderEditAlbumGrid(); };
-        reader.readAsDataURL(file);
+      Array.from(input.files).forEach(f => {
+        const r = new FileReader(); r.onload = e => { editNewPhotos.push(e.target.result); renderEditAlbumGrid(); }; r.readAsDataURL(f);
       });
       input.value = '';
     }
     function renderEditAlbumGrid() {
       const exGrid = document.getElementById('edit-existing-grid'); exGrid.innerHTML = '';
-      stagedExistingPhotos.forEach((src, i) => {
-        exGrid.innerHTML += `<div class="relative h-20 rounded-lg overflow-hidden border"><img src="${src}" class="w-full h-full object-cover"><button type="button" onclick="stagedExistingPhotos.splice(${i},1);renderEditAlbumGrid();" class="absolute top-1 right-1 w-5 h-5 bg-rose-500 text-white rounded text-xs">×</button></div>`;
-      });
+      stagedExistingPhotos.forEach((src, i) => { exGrid.innerHTML += `<div class="relative h-20 rounded-lg overflow-hidden border"><img src="${src}" class="w-full h-full object-cover"><button onclick="stagedExistingPhotos.splice(${i},1);renderEditAlbumGrid()" class="absolute top-1 right-1 w-5 h-5 bg-rose-500 text-white rounded">×</button></div>`; });
       const newGrid = document.getElementById('edit-new-grid'); newGrid.innerHTML = '';
-      editNewPhotos.forEach((src, i) => {
-        newGrid.innerHTML += `<div class="relative h-20 rounded-lg overflow-hidden border-2 border-skybrand-400"><img src="${src}" class="w-full h-full object-cover"><button type="button" onclick="editNewPhotos.splice(${i},1);renderEditAlbumGrid();" class="absolute top-1 right-1 w-5 h-5 bg-rose-500 text-white rounded text-xs">×</button></div>`;
-      });
+      editNewPhotos.forEach((src, i) => { newGrid.innerHTML += `<div class="relative h-20 rounded-lg overflow-hidden border-2 border-skybrand-400"><img src="${src}" class="w-full h-full object-cover"><button onclick="editNewPhotos.splice(${i},1);renderEditAlbumGrid()" class="absolute top-1 right-1 w-5 h-5 bg-rose-500 text-white rounded">×</button></div>`; });
     }
     async function saveEditAlbumPhotos() {
-      const album = appData.projectAlbums.find(a => String(a.id) === activeEditAlbumId);
+      const album = appData.projectAlbums.find(a => a.id === activeEditAlbumId);
       if (album) {
         album.photos = [...stagedExistingPhotos, ...editNewPhotos];
-        closeEditAlbumModal(); await triggerAutoSync();
-        renderGallery(); renderManagerAlbumList(); alert('사진이 업데이트되었습니다!');
+        closeEditAlbumModal(); await triggerAutoSync(); renderGallery(); renderManagerAlbumList(); alert('사진이 업데이트되었습니다!');
       }
     }
 
-    // 현장 관리 및 정산 관련 기본 로직
+    // --- 프로젝트 및 부가 기능 ---
     function calcNewProjTotal() {
       const supply = Number(document.getElementById('new-proj-supply').value || 0);
       document.getElementById('new-proj-total').value = supply + Math.floor(supply * 0.1);
     }
-    function openNewProjectModal() { document.getElementById('project-modal').classList.remove('hidden'); }
+    function openNewProjectModal() { document.getElementById('project-modal').classList.remove('hidden'); calcNewProjTotal(); }
     function closeNewProjectModal() { document.getElementById('project-modal').classList.add('hidden'); }
     async function saveNewProject(e) {
       e.preventDefault();
       const newProj = {
-        id: String(Date.now()), title: document.getElementById('new-proj-title').value.trim(),
-        addr: document.getElementById('new-proj-addr').value.trim(), client: document.getElementById('new-proj-client').value.trim(),
-        clientBizNo: document.getElementById('new-proj-client-bizno').value.trim(), owner: document.getElementById('new-proj-owner').value.trim(),
-        phone: document.getElementById('new-proj-phone').value.trim(), totalAmount: Number(document.getElementById('new-proj-total').value || 0),
-        extraAmount: 0, depositAmount: 0, extraItems: [], notes: ""
+        id: String(Date.now()), title: document.getElementById('new-proj-title').value, client: document.getElementById('new-proj-client').value,
+        totalAmount: Number(document.getElementById('new-proj-total').value || 0), extraAmount: 0, depositAmount: 0, extraItems: []
       };
-      appData.projects.unshift(newProj);
-      closeNewProjectModal(); await triggerAutoSync(); renderProjects(); alert('현장 등록 완료');
+      appData.projects.unshift(newProj); closeNewProjectModal(); await triggerAutoSync(); renderProjects();
     }
-    function renderProjects() {
-      const tbody = document.getElementById('project-table-body'); if (!tbody) return;
-      tbody.innerHTML = ''; let totalBal = 0;
-      appData.projects.forEach(proj => {
-        const bal = (proj.totalAmount + (proj.extraAmount||0)) - (proj.depositAmount||0);
-        totalBal += bal;
-        tbody.innerHTML += `<tr class="hover:bg-slate-50 cursor-pointer border-b" onclick="openProjectDetail('${proj.id}')"><td class="p-3 font-bold text-skybrand-600">${proj.title}</td><td class="p-3">${proj.client}</td><td class="p-3 font-black text-rose-600">${bal.toLocaleString()} 원</td><td class="p-3"><span class="px-2 py-0.5 bg-skybrand-100 text-skybrand-700 rounded text-[11px] font-bold">진행중</span></td><td class="p-3 text-right"><button onclick="event.stopPropagation(); deleteProject('${proj.id}')" class="text-rose-500 font-bold">삭제</button></td></tr>`;
-      });
-      document.getElementById('total-outstanding-balance').innerText = totalBal.toLocaleString() + ' 원';
+
+    let currentAlbumPhotos = [];
+    function openAddProjectAlbumModal() { document.getElementById('project-album-modal').classList.remove('hidden'); currentAlbumPhotos = []; renderAlbumPreviewGrid(); }
+    function closeAddProjectAlbumModal() { document.getElementById('project-album-modal').classList.add('hidden'); }
+    function handleAlbumFilesSelect(input) {
+      if (!input.files) return;
+      Array.from(input.files).forEach(f => {
+        const r = new FileReader(); r.onload = e => { currentAlbumPhotos.push(e.target.result); renderAlbumPreviewGrid(); }; r.readAsDataURL(f);
+      }); input.value = '';
     }
-    async function deleteProject(id) {
-      if(confirm('삭제하시겠습니까?')) {
-        appData.projects = appData.projects.filter(p => p.id !== String(id));
-        await triggerAutoSync(); renderProjects();
-      }
+    function renderAlbumPreviewGrid() {
+      const grid = document.getElementById('album-preview-grid'); grid.innerHTML = '';
+      currentAlbumPhotos.forEach((src, idx) => { grid.innerHTML += `<div class="relative h-16 rounded-lg overflow-hidden border"><img src="${src}" class="w-full h-full object-cover"><button onclick="currentAlbumPhotos.splice(${idx},1);renderAlbumPreviewGrid()" class="absolute top-1 right-1 w-4 h-4 bg-rose-600 text-white rounded-full">×</button></div>`; });
     }
-    async function deleteProjectAlbum(id) {
-      if(confirm('앨범을 삭제하시겠습니까?')) {
-        appData.projectAlbums = appData.projectAlbums.filter(a => a.id !== String(id));
-        await triggerAutoSync(); renderGallery(); renderManagerAlbumList();
-      }
+    async function handleProjectAlbumSubmit(e) {
+      e.preventDefault();
+      const newAlbum = { id: String(Date.now()), title: document.getElementById('album-title').value, category: document.getElementById('album-category').value, photos: [...currentAlbumPhotos] };
+      appData.projectAlbums.unshift(newAlbum); closeAddProjectAlbumModal(); await triggerAutoSync(); renderGallery(); renderManagerAlbumList();
     }
 
     let activeDetailProjectId = null;
     function openProjectDetail(id) {
       const proj = appData.projects.find(p => p.id === String(id));
       if(!proj) return; activeDetailProjectId = proj.id;
-      document.getElementById('detail-title').innerText = proj.title;
-      document.getElementById('detail-client').innerText = proj.client;
-      document.getElementById('detail-owner').innerText = proj.owner;
-      document.getElementById('settle-total').value = proj.totalAmount || 0;
-      document.getElementById('settle-extra').value = proj.extraAmount || 0;
-      document.getElementById('settle-deposit').value = proj.depositAmount || 0;
-      updateSettlementDisplay();
-      document.getElementById('project-detail-modal').classList.remove('hidden');
+      document.getElementById('detail-title').innerText = proj.title; document.getElementById('detail-client').innerText = proj.client;
+      document.getElementById('settle-total').value = proj.totalAmount || 0; document.getElementById('settle-extra').value = proj.extraAmount || 0; document.getElementById('settle-deposit').value = proj.depositAmount || 0;
+      updateSettlementDisplay(); document.getElementById('project-detail-modal').classList.remove('hidden');
     }
     function closeProjectDetailModal() { document.getElementById('project-detail-modal').classList.add('hidden'); }
     async function updateSettlement() {
-      const proj = appData.projects.find(p => p.id === activeDetailProjectId);
-      if(!proj) return;
-      proj.totalAmount = Number(document.getElementById('settle-total').value || 0);
-      proj.extraAmount = Number(document.getElementById('settle-extra').value || 0);
-      proj.depositAmount = Number(document.getElementById('settle-deposit').value || 0);
+      const p = appData.projects.find(p => p.id === activeDetailProjectId); if(!p) return;
+      p.totalAmount = Number(document.getElementById('settle-total').value || 0);
+      p.extraAmount = Number(document.getElementById('settle-extra').value || 0);
+      p.depositAmount = Number(document.getElementById('settle-deposit').value || 0);
       updateSettlementDisplay(); await triggerAutoSync(); renderProjects();
     }
     function updateSettlementDisplay() {
-      const proj = appData.projects.find(p => p.id === activeDetailProjectId);
-      if(!proj) return;
-      const bal = (proj.totalAmount + proj.extraAmount) - proj.depositAmount;
-      document.getElementById('settle-balance').innerText = bal.toLocaleString() + ' 원';
+      const p = appData.projects.find(p => p.id === activeDetailProjectId); if(!p) return;
+      document.getElementById('settle-balance').innerText = ((p.totalAmount + p.extraAmount) - p.depositAmount).toLocaleString() + ' 원';
     }
+
+    function openTaxIssuePrompt() {
+      const proj = appData.projects.find(p => p.id === activeDetailProjectId); if (!proj) return;
+      const supply = Math.floor((proj.totalAmount + (proj.extraAmount||0)) / 1.1);
+      document.getElementById('tax-prompt-supply').value = supply; document.getElementById('tax-prompt-vat').value = (proj.totalAmount + (proj.extraAmount||0)) - supply;
+      document.getElementById('tax-issue-prompt-modal').classList.remove('hidden');
+    }
+    function confirmAndGenerateTaxInvoice() {
+      const s = Number(document.getElementById('tax-prompt-supply').value||0), v = Number(document.getElementById('tax-prompt-vat').value||0);
+      document.getElementById('tax-issue-prompt-modal').classList.add('hidden');
+      const proj = appData.projects.find(p => p.id === activeDetailProjectId);
+      document.getElementById('pdf-title').innerText = proj.title; document.getElementById('pdf-supply').innerText = s.toLocaleString()+' 원';
+      document.getElementById('pdf-vat').innerText = v.toLocaleString()+' 원'; document.getElementById('pdf-export-modal').classList.remove('hidden');
+      appData.taxInvoices.unshift({ id: Date.now(), title: proj.title, client: proj.client, grandTotal: s+v, date: new Date().toLocaleString() });
+      triggerAutoSync(); window.print(); document.getElementById('pdf-export-modal').classList.add('hidden'); renderTaxInvoiceList();
+    }
+
+    function renderProjects() {
+      const tbody = document.getElementById('project-table-body'); if (!tbody) return;
+      tbody.innerHTML = ''; let totalBal = 0;
+      appData.projects.forEach(proj => {
+        const bal = (proj.totalAmount + (proj.extraAmount||0)) - (proj.depositAmount||0); totalBal += bal;
+        tbody.innerHTML += `<tr class="hover:bg-slate-50 cursor-pointer border-b" onclick="openProjectDetail('${proj.id}')"><td class="p-3 font-bold text-skybrand-600">${proj.title}</td><td class="p-3">${proj.client}</td><td class="p-3 font-black text-rose-600">${bal.toLocaleString()} 원</td><td class="p-3">진행중</td><td class="p-3 text-right"><button onclick="event.stopPropagation(); deleteProject('${proj.id}')" class="text-rose-500 font-bold">삭제</button></td></tr>`;
+      });
+      document.getElementById('total-outstanding-balance').innerText = totalBal.toLocaleString() + ' 원';
+    }
+    function renderTaxInvoiceList() {
+      const tbody = document.getElementById('tax-table-body'); if (!tbody) return;
+      tbody.innerHTML = '';
+      appData.taxInvoices.forEach(inv => {
+        tbody.innerHTML += `<tr class="border-b"><td class="p-3">${inv.date}</td><td class="p-3 font-bold text-skybrand-600">${inv.title}</td><td class="p-3">${inv.client}</td><td class="p-3 font-bold">${inv.grandTotal.toLocaleString()}원</td><td class="p-3 text-right"><button onclick="deleteTaxInvoice(${inv.id})" class="text-rose-500 font-bold">삭제</button></td></tr>`;
+      });
+    }
+
+    async function deleteProject(id) { if(confirm('삭제하시겠습니까?')) { appData.projects = appData.projects.filter(p => p.id !== String(id)); await triggerAutoSync(); renderProjects(); } }
+    async function deleteProjectAlbum(id) { if(confirm('앨범을 삭제하시겠습니까?')) { appData.projectAlbums = appData.projectAlbums.filter(a => a.id !== String(id)); await triggerAutoSync(); renderGallery(); renderManagerAlbumList(); } }
+    async function deleteTaxInvoice(id) { if(confirm('기록을 삭제할까요?')) { appData.taxInvoices = appData.taxInvoices.filter(i => i.id !== id); await triggerAutoSync(); renderTaxInvoiceList(); } }
 
     function switchTab(t) {
       ['project', 'photos', 'tax'].forEach(tab => {
         document.getElementById(`tab-content-${tab}`).classList.toggle('hidden', tab !== t);
         document.getElementById(`tab-btn-${tab}`).className = tab === t ? "px-5 py-3 rounded-t-xl bg-white text-skybrand-600 border-t-2 border-skybrand-600 shadow-sm" : "px-5 py-3 rounded-t-xl bg-slate-200 text-slate-600";
       });
-      if (t === 'photos') renderManagerAlbumList();
-      if (t === 'project') renderProjects();
-      if (t === 'tax') renderTaxInvoiceList();
-      lucide.createIcons();
+      if(t==='photos') renderManagerAlbumList(); if(t==='project') renderProjects(); if(t==='tax') renderTaxInvoiceList();
     }
 
-    let activeLightboxAlbum = null; let activeLightboxIndex = 0;
     function openLightbox(albumId) {
-      activeLightboxAlbum = appData.projectAlbums.find(a => String(a.id) === String(albumId));
-      if (!activeLightboxAlbum || !activeLightboxAlbum.photos || activeLightboxAlbum.photos.length === 0) return;
-      activeLightboxIndex = 0; document.getElementById('lb-title').innerText = activeLightboxAlbum.title;
-      document.getElementById('lb-image').src = activeLightboxAlbum.photos[0];
+      const a = appData.projectAlbums.find(a => String(a.id) === String(albumId));
+      if (!a || !a.photos || a.photos.length === 0) return;
+      document.getElementById('lb-title').innerText = a.title; document.getElementById('lb-image').src = a.photos[0];
       document.getElementById('lightbox-modal').classList.remove('hidden');
     }
     function closeLightbox() { document.getElementById('lightbox-modal').classList.add('hidden'); }
