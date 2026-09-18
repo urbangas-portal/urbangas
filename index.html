@@ -8,7 +8,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
 
-  <!-- 파이어베이스 호환 라이브러리 (로컬 실행 오류 방지용) -->
+  <!-- 파이어베이스 호환 라이브러리 -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
@@ -92,7 +92,6 @@
 
   <!-- MODE 1: 대외 고객용 소개 화면 -->
   <main id="view-public" class="flex-grow">
-    <!-- 1. HERO SECTION -->
     <section id="hero" class="relative bg-gradient-to-b from-skybrand-50/70 via-white to-slate-50 py-20 lg:py-28 overflow-hidden border-b border-slate-200">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div class="max-w-3xl">
@@ -256,7 +255,7 @@
   <!-- [현장 공정 등록 모달] -->
   <div id="project-modal" class="fixed inset-0 z-50 bg-slate-900/60 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl p-6 max-w-2xl w-full border shadow-2xl overflow-y-auto max-h-[92vh]">
-      <div class="flex justify-between items-center mb-4 pb-2 border-b"><h3 class="text-base font-black">신규 현장 등록</h3><button onclick="closeNewProjectModal()"><i data-lucide="x" class="w-5 h-5 text-slate-400"></i></button></div>
+      <div class="flex justify-between items-center mb-4 pb-2 border-b"><h3 class="text-base font-black">신규 현장 등록</h3><button type="button" onclick="closeNewProjectModal()"><i data-lucide="x" class="w-5 h-5 text-slate-400"></i></button></div>
       <form onsubmit="saveNewProject(event)" class="space-y-4 text-xs">
         <div class="grid grid-cols-2 gap-3">
           <div><label class="block font-bold mb-1">공사명</label><input type="text" id="new-proj-title" required class="w-full bg-slate-50 border p-2 rounded-xl"></div>
@@ -280,7 +279,7 @@
   <!-- [사진 앨범 등록 모달] -->
   <div id="project-album-modal" class="fixed inset-0 z-50 bg-slate-900/60 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl p-6 max-w-xl w-full border shadow-2xl overflow-y-auto max-h-[92vh]">
-      <div class="flex justify-between items-center mb-4 pb-2 border-b"><h3 class="text-base font-black">시공사례 앨범 등록</h3><button onclick="closeAddProjectAlbumModal()"><i data-lucide="x" class="w-5 h-5 text-slate-400"></i></button></div>
+      <div class="flex justify-between items-center mb-4 pb-2 border-b"><h3 class="text-base font-black">시공사례 앨범 등록</h3><button type="button" onclick="closeAddProjectAlbumModal()"><i data-lucide="x" class="w-5 h-5 text-slate-400"></i></button></div>
       <form onsubmit="handleProjectAlbumSubmit(event)" class="space-y-4 text-xs">
         <div><label class="block font-bold mb-1">공사 건명</label><input type="text" id="album-title" required class="w-full bg-slate-50 border p-2 rounded-xl"></div>
         <div class="grid grid-cols-2 gap-3">
@@ -328,29 +327,14 @@
     </div>
   </div>
 
-  <!-- [사진 관리 통합 모달 (수정 및 삭제 기능 최적화 적용)] -->
+  <!-- [사진 관리 통합 편집기 모달] -->
   <div id="edit-album-modal" class="fixed inset-0 z-[60] bg-slate-900/60 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl p-6 max-w-2xl w-full border shadow-2xl overflow-y-auto max-h-[92vh]">
-      <div class="flex justify-between items-center mb-4 pb-2 border-b"><h3 class="text-base font-black">사진 통합 관리</h3><button onclick="closeEditAlbumModal()"><i data-lucide="x" class="w-5 h-5"></i></button></div>
+      <div class="flex justify-between items-center mb-4 pb-2 border-b"><h3 class="text-base font-black">사진 통합 관리</h3><button type="button" onclick="closeEditAlbumModal()"><i data-lucide="x" class="w-5 h-5"></i></button></div>
       <div class="space-y-4 text-xs">
-        <div>
-          <span class="block font-bold mb-2">기존 사진 (X 클릭 시 삭제)</span>
-          <!-- 여기에 기존 사진 썸네일과 삭제 버튼이 동적으로 생성됨 -->
-          <div id="edit-existing-grid" class="grid grid-cols-4 gap-2 p-2 bg-slate-50 rounded-xl border min-h-[5rem]"></div>
-        </div>
-        <div>
-          <span class="block font-bold mb-2">새 사진 추가</span>
-          <div class="border-2 border-dashed p-3 text-center cursor-pointer" onclick="document.getElementById('edit-file-input').click()">
-            <input type="file" id="edit-file-input" accept="image/*" multiple onchange="handleEditFilesSelect(this)" class="hidden">
-            <p class="font-bold">사진 선택</p>
-          </div>
-          <!-- 새로 추가할 사진 썸네일 미리보기 영역 -->
-          <div id="edit-new-grid" class="grid grid-cols-4 gap-2 mt-2"></div>
-        </div>
-        <div class="flex gap-2 pt-3 border-t">
-          <button onclick="closeEditAlbumModal()" class="flex-1 py-2.5 bg-slate-100 rounded-xl font-bold">취소</button>
-          <button onclick="saveEditAlbumPhotos()" class="flex-1 py-2.5 bg-skybrand-600 text-white rounded-xl font-bold">저장</button>
-        </div>
+        <div><span class="block font-bold mb-2">기존 사진 (X 클릭 시 삭제)</span><div id="edit-existing-grid" class="grid grid-cols-4 gap-2 p-2 bg-slate-50 rounded-xl border min-h-[5rem]"></div></div>
+        <div><span class="block font-bold mb-2">새 사진 추가</span><div class="border-2 border-dashed p-3 text-center cursor-pointer" onclick="document.getElementById('edit-file-input').click()"><input type="file" id="edit-file-input" accept="image/*" multiple onchange="handleEditFilesSelect(this)" class="hidden"><p class="font-bold">사진 선택 (자동 압축됨)</p></div><div id="edit-new-grid" class="grid grid-cols-4 gap-2 mt-2"></div></div>
+        <div class="flex gap-2 pt-3 border-t"><button type="button" onclick="closeEditAlbumModal()" class="flex-1 py-2.5 bg-slate-100 rounded-xl font-bold">취소</button><button type="button" onclick="saveEditAlbumPhotos()" class="flex-1 py-2.5 bg-skybrand-600 text-white rounded-xl font-bold">저장</button></div>
       </div>
     </div>
   </div>
@@ -383,6 +367,22 @@
     </div>
   </div>
 
+  <!-- [세금계산서 내역 팝업] -->
+  <div id="tax-invoice-detail-modal" class="fixed inset-0 z-[60] bg-slate-900/70 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl p-6 max-w-md w-full border shadow-2xl">
+      <div class="flex justify-between items-center mb-4 border-b pb-3"><h3 class="text-lg font-black">발행 상세 내역</h3><button onclick="closeTaxInvoiceDetailModal()"><i data-lucide="x" class="w-5 h-5 text-slate-400"></i></button></div>
+      <div class="space-y-3 text-sm">
+        <div><span class="text-xs font-bold text-slate-500">공사명</span><div id="tax-det-title" class="font-bold"></div></div>
+        <div class="bg-slate-50 p-3 rounded-xl border space-y-1 text-xs">
+          <div class="flex justify-between"><span>공급가액</span><span id="tax-det-supply" class="font-bold"></span></div>
+          <div class="flex justify-between"><span>세액</span><span id="tax-det-vat" class="font-bold"></span></div>
+          <div class="flex justify-between text-rose-600 font-black border-t pt-2"><span>잔금</span><span id="tax-det-bal"></span></div>
+        </div>
+      </div>
+      <button onclick="closeTaxInvoiceDetailModal()" class="w-full mt-5 py-2.5 bg-slate-100 rounded-xl font-bold">확인</button>
+    </div>
+  </div>
+
   <!-- 라이트박스 -->
   <div id="lightbox-modal" class="fixed inset-0 z-[70] bg-slate-950/90 hidden flex items-center justify-center p-4">
     <div class="max-w-4xl w-full bg-slate-900 rounded-3xl overflow-hidden shadow-2xl flex flex-col relative text-white">
@@ -394,10 +394,9 @@
 
   <script>
     /* =========================================================
-       JavaScript 로직 (강력한 사진 압축 및 안전 저장 로직 포함)
+       JavaScript 로직 (로컬 + Firebase 보호 처리 & 1MB 분산 저장)
        ========================================================= */
     const SECRET_PIN = "1270";
-    // 회색 '등록된 사진 없음' 임시 이미지
     const NO_IMAGE_PLACEHOLDER = "data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22600%22%20height%3D%22400%22%3E%3Crect%20fill%3D%22%23f1f5f9%22%20width%3D%22600%22%20height%3D%22400%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20text-anchor%3D%22middle%22%20font-size%3D%2218%22%20font-weight%3D%22bold%22%20fill%3D%22%23cbd5e1%22%3E%EB%93%B1%EB%A1%9D%EB%90%9C%20%EC%82%AC%EC%A7%84%20%EC%97%86%EC%9D%8C%3C%2Ftext%3E%3C%2Fsvg%3E";
 
     // 💡 [Firebase 설정] 나중에 Firebase 콘솔에서 발급받은 본인 키로 변경하세요!
@@ -410,16 +409,20 @@
       appId: "1:440039081574:web:1f0551ddc5c3f93e0b0fa7"
     };
 
+
     let fbDb = null;
     let isFirebaseReady = false;
 
+    // 파이어베이스 초기화 (오류 방지 보호)
     try {
       if (typeof firebase !== 'undefined' && firebaseConfig.apiKey !== "YOUR_API_KEY") {
         firebase.initializeApp(firebaseConfig);
         fbDb = firebase.firestore();
         isFirebaseReady = true;
       }
-    } catch(e) { console.warn("Firebase Init Error", e); }
+    } catch(e) {
+      console.warn("Firebase 초기화 에러:", e);
+    }
 
     // --- 데이터 로드 ---
     let appData = {
@@ -430,43 +433,75 @@
       taxInvoices: JSON.parse(localStorage.getItem('gwangjin_tax_invoices')) || []
     };
 
-    // --- 동기화 및 백업 ---
+    // --- 동기화 로직 (1MB 분산 저장 처리) ---
     async function triggerAutoSync() {
-      // 용량 초과 방지 및 로컬 저장
+      // 1. 브라우저 저장소 (로컬 백업)
       try {
         localStorage.setItem('gwangjin_projects', JSON.stringify(appData.projects));
         localStorage.setItem('gwangjin_project_albums', JSON.stringify(appData.projectAlbums));
         localStorage.setItem('gwangjin_tax_invoices', JSON.stringify(appData.taxInvoices));
-      } catch (err) { alert("저장 공간 부족! 이전 사진을 삭제하세요."); return; }
+      } catch (err) {}
 
-      // 파이어베이스(연결 시)
+      // 2. 파이어베이스 클라우드 저장
       if (isFirebaseReady && fbDb) {
         try {
-          await fbDb.collection("gwangjin").doc("portal_data").set(appData);
+          // 용량(1MB) 제한을 피하기 위해 사진 데이터 분리 저장 (뼈대만 먼저 저장)
+          let cloudData = {
+            projects: appData.projects,
+            taxInvoices: appData.taxInvoices,
+            projectAlbumsMeta: appData.projectAlbums.map(a => ({ id: a.id, title: a.title, category: a.category, date: a.date, desc: a.desc }))
+          };
+          await fbDb.collection("gwangjin").doc("portal_data").set(cloudData);
+
+          // 사진은 앨범별로 개별 문서로 쪼개서 저장 (1MB 분산)
+          for (const album of appData.projectAlbums) {
+            await fbDb.collection("gwangjin_albums").doc(String(album.id)).set({ photos: album.photos || [] });
+          }
         } catch (err) { console.warn("클라우드 저장 실패", err); }
       }
     }
 
-    async function manualCloudSync() {
+    // 클라우드 데이터 불러오기 (수동/자동 통합)
+    async function manualCloudSync(isSilent = false) {
       if (!isFirebaseReady) {
-        document.getElementById('import-file-input').click(); 
+        if (!isSilent) document.getElementById('import-file-input').click(); 
         return;
       }
       try {
-        const doc = await fbDb.collection("gwangjin").doc("portal_data").get();
-        if (doc.exists) {
-          const cloudData = doc.data();
-          if (cloudData.projects && cloudData.projects.length > 0) appData.projects = cloudData.projects;
-          if (cloudData.projectAlbums && cloudData.projectAlbums.length > 0) appData.projectAlbums = cloudData.projectAlbums;
-          if (cloudData.taxInvoices && cloudData.taxInvoices.length > 0) appData.taxInvoices = cloudData.taxInvoices;
-          await triggerAutoSync();
+        const docSnap = await fbDb.collection("gwangjin").doc("portal_data").get();
+        if (docSnap.exists) {
+          const cloudData = docSnap.data();
+          if (cloudData.projects) appData.projects = cloudData.projects;
+          if (cloudData.taxInvoices) appData.taxInvoices = cloudData.taxInvoices;
+          
+          // 분산된 사진 문서들 결합 (1MB 우회 로직)
+          if (cloudData.projectAlbumsMeta) {
+            let loadedAlbums = [];
+            for (const meta of cloudData.projectAlbumsMeta) {
+              let albumPhotos = [];
+              try {
+                const photoDoc = await fbDb.collection("gwangjin_albums").doc(String(meta.id)).get();
+                if (photoDoc.exists) albumPhotos = photoDoc.data().photos || [];
+              } catch(e) {}
+              loadedAlbums.push({ ...meta, photos: albumPhotos });
+            }
+            appData.projectAlbums = loadedAlbums;
+          } else if (cloudData.projectAlbums) {
+            appData.projectAlbums = cloudData.projectAlbums; // 구버전 호환
+          }
+
+          localStorage.setItem('gwangjin_projects', JSON.stringify(appData.projects));
+          localStorage.setItem('gwangjin_project_albums', JSON.stringify(appData.projectAlbums));
+          localStorage.setItem('gwangjin_tax_invoices', JSON.stringify(appData.taxInvoices));
+          
           renderGallery(); renderManagerAlbumList(); renderProjects(); renderTaxInvoiceList();
-          alert('클라우드에서 최신 데이터를 불러왔습니다!');
+          if (!isSilent) alert('클라우드에서 최신 데이터를 성공적으로 불러왔습니다!');
         } else {
-          alert('클라우드에 저장된 데이터가 없습니다. 현재 자료를 업로드합니다.');
           await triggerAutoSync();
         }
-      } catch(e) { alert('동기화 실패: 설정값을 확인하세요.'); }
+      } catch(e) { 
+        if (!isSilent) alert('동기화 실패: 설정값을 확인하세요.'); 
+      }
     }
 
     function importDataFromFile(input) {
@@ -507,7 +542,8 @@
           badge.innerText = "☁️ Firebase 실시간 동기화 활성";
           badge.className = "px-3 py-0.5 rounded-full text-[11px] font-black bg-emerald-100 text-emerald-700 border border-emerald-400";
           syncBtn.innerHTML = `<i data-lucide="cloud-sync" class="w-4 h-4"></i><span>☁️ 클라우드 수동 갱신</span>`;
-          manualCloudSync(); 
+          // 조용히(isSilent=true) 클라우드 자동 동기화 실행
+          manualCloudSync(true); 
         } else {
           badge.innerText = "⚙️ 클라우드 설정 대기중 (로컬 모드)";
           badge.className = "px-3 py-0.5 rounded-full text-[11px] font-black bg-amber-100 text-amber-700 border border-amber-400";
@@ -527,7 +563,7 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // [핵심 변경] 사진 용량 강제 축소 압축 함수 (스마트폰 고화질 대응)
+    // [핵심] 고화질 이미지 강제 압축 함수 (용량 초과 방지)
     async function compressImage(file) {
       return new Promise((resolve) => {
         const reader = new FileReader();
@@ -535,7 +571,7 @@
           const img = new Image();
           img.onload = () => {
             const canvas = document.createElement('canvas');
-            const MAX_DIMENSION = 800; // 최대 가로세로 800px로 축소
+            const MAX_DIMENSION = 600; // 가로세로 최대 600px로 리사이징
             let width = img.width;
             let height = img.height;
 
@@ -547,7 +583,7 @@
             canvas.width = width; canvas.height = height;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
-            resolve(canvas.toDataURL('image/jpeg', 0.6)); // 용량 60% 압축 (안전장치)
+            resolve(canvas.toDataURL('image/jpeg', 0.5)); // 화질 50%로 최적화 (용량 대폭 감소)
           };
           img.src = e.target.result;
         };
@@ -579,12 +615,9 @@
 
         const photoCount = album.photos && album.photos.length > 0 ? album.photos.length : 0;
         const thumb = photoCount > 0 ? album.photos[0] : NO_IMAGE_PLACEHOLDER;
-        const div = document.createElement('div');
-        div.className = "bg-white rounded-2xl overflow-hidden border shadow-sm hover:shadow-md transition-all cursor-pointer group";
-        div.onclick = () => openLightbox(album.id);
-
-        div.innerHTML = `
-          <div>
+        
+        grid.innerHTML += `
+          <div class="bg-white rounded-2xl overflow-hidden border shadow-sm hover:shadow-md transition-all cursor-pointer group" onclick="openLightbox('${album.id}')">
             <div class="h-52 bg-slate-100 overflow-hidden relative flex items-center justify-center">
               <img src="${thumb}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
               <span class="absolute top-3 left-3 text-[10px] font-bold px-2.5 py-1 rounded-lg ${badgeColor} shadow-sm">${album.category}</span>
@@ -597,7 +630,6 @@
             </div>
           </div>
         `;
-        grid.appendChild(div);
       });
       lucide.createIcons();
     }
@@ -614,7 +646,6 @@
         const thumb = photoCount > 0 ? album.photos[0] : NO_IMAGE_PLACEHOLDER;
         const div = document.createElement('div');
         div.className = "bg-slate-50 rounded-2xl p-4 border flex justify-between items-center cursor-pointer hover:border-skybrand-300";
-        // 전체 영역 클릭 시 수정창 오픈
         div.onclick = () => openEditAlbumModal(album.id);
         
         div.innerHTML = `
@@ -670,7 +701,7 @@
       appData.projectAlbums.unshift(newAlbum); closeAddProjectAlbumModal(); await triggerAutoSync(); renderGallery(); renderManagerAlbumList();
     }
 
-    // --- [핵심] 사진 통합 편집 (삭제/추가) 로직 DOM 안전화 처리 ---
+    // --- 사진 통합 편집 (삭제/추가) ---
     let activeEditAlbumId = null, stagedExistingPhotos = [], editNewPhotos = [];
     function openEditAlbumModal(id) {
       activeEditAlbumId = String(id);
@@ -768,7 +799,7 @@
       document.getElementById('total-outstanding-balance').innerText = totalBal.toLocaleString() + ' 원';
     }
     
-    // 세금계산서 로직 생략 (동일유지)
+    // 세금계산서 로직
     function openTaxIssuePrompt() {
       const proj = appData.projects.find(p => p.id === activeDetailProjectId); if (!proj) return;
       const supply = Math.floor((proj.totalAmount + (proj.extraAmount||0)) / 1.1);
@@ -788,9 +819,19 @@
       const tbody = document.getElementById('tax-table-body'); if (!tbody) return;
       tbody.innerHTML = '';
       appData.taxInvoices.forEach(inv => {
-        tbody.innerHTML += `<tr class="border-b"><td class="p-3">${inv.date}</td><td class="p-3 font-bold text-skybrand-600">${inv.title}</td><td class="p-3">${inv.client}</td><td class="p-3 font-bold">${inv.grandTotal.toLocaleString()}원</td><td class="p-3 text-right"><button onclick="deleteTaxInvoice(${inv.id})" class="text-rose-500 font-bold">삭제</button></td></tr>`;
+        tbody.innerHTML += `<tr class="border-b"><td class="p-3">${inv.date}</td><td class="p-3 font-bold text-skybrand-600 cursor-pointer hover:underline" onclick="openTaxInvoiceDetail(${inv.id})">${inv.title}</td><td class="p-3">${inv.client}</td><td class="p-3 font-bold">${inv.grandTotal.toLocaleString()}원</td><td class="p-3 text-right"><button onclick="deleteTaxInvoice(${inv.id})" class="text-rose-500 font-bold">삭제</button></td></tr>`;
       });
     }
+
+    function openTaxInvoiceDetail(id) {
+      const inv = appData.taxInvoices.find(i => i.id === id); if(!inv) return;
+      document.getElementById('tax-det-title').innerText = inv.title;
+      document.getElementById('tax-det-supply').innerText = (inv.supply || 0).toLocaleString() + ' 원';
+      document.getElementById('tax-det-vat').innerText = (inv.vat || 0).toLocaleString() + ' 원';
+      document.getElementById('tax-det-bal').innerText = (inv.bal || 0).toLocaleString() + ' 원';
+      document.getElementById('tax-invoice-detail-modal').classList.remove('hidden');
+    }
+    function closeTaxInvoiceDetailModal() { document.getElementById('tax-invoice-detail-modal').classList.add('hidden'); }
 
     async function deleteProject(id) { if(confirm('삭제하시겠습니까?')) { appData.projects = appData.projects.filter(p => p.id !== String(id)); await triggerAutoSync(); renderProjects(); } }
     async function deleteProjectAlbum(id) { if(confirm('앨범을 삭제하시겠습니까?')) { appData.projectAlbums = appData.projectAlbums.filter(a => a.id !== String(id)); await triggerAutoSync(); renderGallery(); renderManagerAlbumList(); } }
