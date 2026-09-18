@@ -151,9 +151,9 @@
           <p class="text-2xl sm:text-3xl font-black text-slate-900">원칙과 안전을 지키는 5단계 시공 공정</p>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200"><span class="text-4xl font-black text-slate-200">01</span><h4 class="text-base font-bold text-slate-800 mt-2 mb-2">현장실측 & 인허가 신청</h4><p class="text-xs text-slate-500">배관 루트 실측 및 소비량 계산</p></div>
-          <div class="p-5 rounded-2xl bg-skybrand-50 border border-skybrand-200"><span class="text-4xl font-black text-skybrand-200">02</span><h4 class="text-base font-bold text-skybrand-800 mt-2 mb-2">견적 및 계약</h4><p class="text-xs text-skybrand-600">상세 견적 안내 및 시공 계약 체결</p></div>
-          <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200"><span class="text-4xl font-black text-slate-200">03</span><h4 class="text-base font-bold text-slate-800 mt-2 mb-2">내부 및 외부 시공</h4><p class="text-xs text-slate-500">실내외 강관 정밀 배관 시공</p></div>
+          <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200"><span class="text-4xl font-black text-slate-200">01</span><h4 class="text-base font-bold text-slate-800 mt-2 mb-2">현장실측 및 견적</h4><p class="text-xs text-slate-500">배관 루트 실측 및 소비량 계산</p></div>
+          <div class="p-5 rounded-2xl bg-skybrand-50 border border-skybrand-200"><span class="text-4xl font-black text-skybrand-200">02</span><h4 class="text-base font-bold text-skybrand-800 mt-2 mb-2">계약 및 인허가 신청</h4><p class="text-xs text-skybrand-600">상세 견적 안내 및 시공 계약 체결</p></div>
+          <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200"><span class="text-4xl font-black text-slate-200">03</span><h4 class="text-base font-bold text-slate-800 mt-2 mb-2">내부 및 외부 시공</h4><p class="text-xs text-slate-500">실내외 강관 배관 및 매설배관 시공</p></div>
           <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200"><span class="text-4xl font-black text-slate-200">04</span><h4 class="text-base font-bold text-slate-800 mt-2 mb-2">기밀시험(압력테스트)</h4><p class="text-xs text-slate-500">KGS 규정 미세 누출 검증</p></div>
           <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200"><span class="text-4xl font-black text-slate-200">05</span><h4 class="text-base font-bold text-slate-800 mt-2 mb-2">완성검사 & 가스공급</h4><p class="text-xs text-slate-500">검사 합격 후 안전 개통</p></div>
         </div>
@@ -178,7 +178,7 @@
         </div>
         <div class="flex items-center gap-2">
           <button onclick="openChangePinModal()" class="flex items-center gap-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 px-3.5 py-2.5 rounded-xl font-bold text-xs transition-all"><i data-lucide="key" class="w-4 h-4"></i><span>비밀번호 변경</span></button>
-          <button onclick="fetchDriveData(true)" class="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl font-bold text-xs shadow-sm transition-all"><i data-lucide="cloud-sync" class="w-4 h-4"></i><span>구글드라이브 동기화</span></button>
+          <button onclick="fetchDriveData(true)" class="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl font-bold text-xs shadow-sm transition-all"><i data-lucide="cloud-sync" class="w-4 h-4"></i><span>구글드라이브 수동동기화</span></button>
           <button onclick="logoutManagerMode()" class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-900 text-white px-4 py-2.5 rounded-xl font-bold text-xs transition-all"><i data-lucide="log-out" class="w-4 h-4"></i><span>관제실 종료</span></button>
         </div>
       </div>
@@ -389,7 +389,7 @@
     </div>
   </div>
 
-  <!-- [5] 현장 상세 관리 및 수정 모달 -->
+  <!-- [5] 현장 상세 관리 및 수정 모달 (계약서 다중 업로드 및 세로 정산 폼) -->
   <div id="project-detail-modal" class="fixed inset-0 z-50 bg-slate-900/70 hidden flex items-center justify-center p-2 sm:p-4">
     <div class="bg-white rounded-3xl max-w-4xl w-full border shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
       <div class="p-5 sm:p-6 border-b flex justify-between items-center bg-slate-50 shrink-0">
@@ -456,18 +456,15 @@
           </div>
         </div>
 
-        <!-- 💡 부가세 별도 체크박스가 추가된 정산 보드 -->
+        <!-- 1단 세로 정산 보드 -->
         <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-4">
           <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-100 pb-3 gap-3">
             <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
               <h4 class="font-black text-sm text-slate-800">금액 정산 및 청구 내역</h4>
-              
-              <!-- 💡 신규: 부가세 별도 입력 토글 -->
               <label class="flex items-center gap-1.5 cursor-pointer bg-skybrand-50 px-2.5 py-1.5 rounded-lg border border-skybrand-200 hover:bg-skybrand-100 transition-colors shadow-sm">
                 <input type="checkbox" id="det-vat-excluded" onchange="updateSettlementDisplayOnly()" class="w-4 h-4 rounded text-skybrand-600 focus:ring-skybrand-500 border-slate-300">
                 <span class="text-xs font-bold text-skybrand-800">입력 금액 부가세 별도 (저장 시 10% 자동가산)</span>
               </label>
-
             </div>
             <div class="bg-rose-50 px-3 py-1.5 rounded-lg border border-rose-100 flex items-center gap-2 shrink-0">
               <span class="text-xs font-bold text-rose-500">현재 최종 잔금</span>
@@ -504,6 +501,7 @@
           </div>
         </div>
 
+        <!-- 첨부 서류 -->
         <div class="bg-slate-50 border border-slate-200 p-4 rounded-xl mt-4 space-y-4">
           <h4 class="font-bold text-slate-700 text-[11px]">■ 첨부 서류 (PDF/이미지 자동 변환 및 다중 저장)</h4>
           
@@ -1154,7 +1152,6 @@
     function saveProjectDetail(silent = false) {
       const p = appData.projects.find(p => p.id === activeDetailProjectId); if(!p) return;
       
-      // 💡 부가세 별도 체크되어있으면 입력된 값들에 1.1을 곱해 실제 입력창 및 변수에 업데이트 후 체크 해제
       const isExcluded = document.getElementById('det-vat-excluded') ? document.getElementById('det-vat-excluded').checked : false;
       if (isExcluded) {
         document.getElementById('settle-total').value = Math.floor(Number(document.getElementById('settle-total').value || 0) * 1.1);
