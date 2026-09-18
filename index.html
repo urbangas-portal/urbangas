@@ -88,7 +88,6 @@
 
   <!-- MODE 1: 대외 고객용 소개 화면 -->
   <main id="view-public" class="flex-grow">
-    <!-- 1. HERO SECTION -->
     <section id="hero" class="relative bg-gradient-to-b from-skybrand-50/70 via-white to-slate-50 py-20 lg:py-28 overflow-hidden border-b border-slate-200">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div class="max-w-3xl">
@@ -160,11 +159,11 @@
   <section id="view-manager" class="hidden flex-grow bg-slate-100 py-8">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       
-      <!-- 상단 컨트롤 바 -->
       <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div class="flex flex-wrap items-center gap-2 mb-2">
             <span class="px-3 py-1 bg-skybrand-100 text-skybrand-700 text-xs font-bold rounded-lg border">광진유한회사 기술시공본부</span>
+            <!-- 구글 드라이브 클라우드 상태 뱃지 -->
             <span id="sync-drive-badge" class="px-3 py-0.5 rounded-full text-[11px] font-black bg-emerald-100 text-emerald-700 border border-emerald-400">
               📁 Google Drive 실시간 클라우드 연동
             </span>
@@ -172,7 +171,7 @@
           <h2 class="text-2xl font-black text-slate-900">강희성 부장 현장 총괄 관제실</h2>
         </div>
         <div class="flex items-center gap-2">
-          <button onclick="fetchDriveData(true)" class="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl font-bold text-xs shadow-sm transition-all"><i data-lucide="cloud-sync" class="w-4 h-4"></i><span>구글드라이브 동기화</span></button>
+          <button onclick="fetchDriveData(true)" class="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl font-bold text-xs shadow-sm transition-all"><i data-lucide="cloud-sync" class="w-4 h-4"></i><span>구글드라이브 수동동기화</span></button>
           <button onclick="logoutManagerMode()" class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-900 text-white px-4 py-2.5 rounded-xl font-bold text-xs transition-all"><i data-lucide="log-out" class="w-4 h-4"></i><span>관제실 종료</span></button>
         </div>
       </div>
@@ -236,7 +235,7 @@
   </footer>
 
   <!-- ==============================================
-       모달 (팝업창) 영역 모음 (중복 완전 제거)
+       모달 (팝업창) 영역 모음 
        ============================================== -->
 
   <!-- [1] 비밀번호 모달 -->
@@ -418,12 +417,28 @@
     </div>
   </div>
 
-  <!-- [8] 갤러리 이미지 확대보기 (라이트박스) -->
+  <!-- [8] 갤러리 이미지 확대보기 (다중 이미지 넘겨보기 복구 완료) -->
   <div id="lightbox-modal" class="fixed inset-0 z-[70] bg-slate-950/90 hidden flex items-center justify-center p-4">
     <div class="max-w-4xl w-full bg-slate-900 rounded-3xl overflow-hidden shadow-2xl flex flex-col relative text-white">
-      <button onclick="closeLightbox()" class="absolute top-4 right-4 z-20 w-10 h-10 rounded-full bg-black/60 flex items-center justify-center"><i data-lucide="x" class="w-6 h-6"></i></button>
-      <div class="p-5 border-b border-slate-800"><span id="lb-title" class="font-bold text-sm">공사명</span></div>
-      <div class="relative h-[55vh] flex items-center justify-center bg-black"><img id="lb-image" src="" class="max-h-full max-w-full object-contain"></div>
+      <button onclick="closeLightbox()" class="absolute top-4 right-4 z-20 w-10 h-10 rounded-full bg-black/60 flex items-center justify-center hover:bg-black/80 transition-colors"><i data-lucide="x" class="w-6 h-6"></i></button>
+      <div class="p-5 border-b border-slate-800 flex justify-between items-center">
+        <div>
+          <span id="lb-category" class="px-2 py-0.5 text-[10px] font-bold rounded bg-skybrand-600 text-white mr-2"></span>
+          <span id="lb-title" class="font-bold text-sm">공사명</span>
+        </div>
+        <span id="lb-counter" class="text-xs font-bold text-slate-400 mr-8">1 / 1</span>
+      </div>
+      <div class="relative h-[55vh] flex items-center justify-center bg-black">
+        <img id="lb-image" src="" class="max-h-full max-w-full object-contain">
+        <!-- 좌우 넘기기 버튼 복구 -->
+        <button onclick="prevLightboxImage()" class="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/80 transition-colors"><i data-lucide="chevron-left" class="w-6 h-6"></i></button>
+        <button onclick="nextLightboxImage()" class="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/80 transition-colors"><i data-lucide="chevron-right" class="w-6 h-6"></i></button>
+      </div>
+      <!-- 하단 썸네일 바 복구 -->
+      <div class="p-4 bg-slate-900 border-t border-slate-800 text-slate-300">
+        <p id="lb-desc" class="text-xs mb-3"></p>
+        <div id="lb-thumbnail-bar" class="flex gap-2 overflow-x-auto pb-1"></div>
+      </div>
     </div>
   </div>
 
@@ -504,7 +519,7 @@
       }
     }
 
-    // --- 구글 드라이브 자동 저장 ---
+    // --- 구글 드라이브 자동 저장 (비동기로 백그라운드에서 조용히 실행) ---
     async function triggerAutoSync() {
       localStorage.setItem('gwangjin_projects', JSON.stringify(appData.projects));
       localStorage.setItem('gwangjin_project_albums', JSON.stringify(appData.projectAlbums));
@@ -512,7 +527,7 @@
 
       if (GOOGLE_SCRIPT_URL && !GOOGLE_SCRIPT_URL.includes("여기에")) {
         try {
-          await fetch(GOOGLE_SCRIPT_URL, {
+          fetch(GOOGLE_SCRIPT_URL, {
             method: "POST",
             body: JSON.stringify({ action: "syncData", payload: appData })
           });
@@ -657,7 +672,7 @@
         
         const div = document.createElement('div');
         div.className = "bg-white rounded-2xl p-4 border border-slate-200 flex justify-between items-center cursor-pointer hover:border-skybrand-400 hover:shadow-md transition-all";
-        div.onclick = () => openEditAlbumModal(album.id); // 행을 클릭하면 편집창이 열리도록 연결
+        div.onclick = () => openEditAlbumModal(album.id);
         
         div.innerHTML = `
           <div class="flex items-center gap-3.5">
@@ -706,6 +721,7 @@
 
     function renderAlbumPreviewGrid() {
       const grid = document.getElementById('album-preview-grid'); grid.innerHTML = '';
+      document.getElementById('album-photo-count').innerText = `${currentAlbumPhotos.length}장`;
       currentAlbumPhotos.forEach((src, idx) => {
         const div = document.createElement('div');
         div.className = "relative h-16 rounded-lg overflow-hidden border";
@@ -715,17 +731,17 @@
       });
     }
 
-    async function handleProjectAlbumSubmit(e) {
+    function handleProjectAlbumSubmit(e) {
       e.preventDefault();
       const newAlbum = { id: String(Date.now()), title: document.getElementById('album-title').value.trim(), category: document.getElementById('album-category').value, date: document.getElementById('album-date').value, desc: document.getElementById('album-desc').value.trim(), photos: [...currentAlbumPhotos] };
       appData.projectAlbums.unshift(newAlbum); 
       closeAddProjectAlbumModal(); 
-      await triggerAutoSync(); 
       renderGallery(); 
       renderManagerAlbumList();
+      triggerAutoSync(); // 백그라운드 동기화로 변경하여 UI 지연 해소
     }
 
-    // --- [핵심 복구] 사진 통합 편집 (수정/삭제/추가) ---
+    // --- 사진 통합 편집 (수정/삭제/추가) ---
     let activeEditAlbumId = null, stagedExistingPhotos = [], editNewPhotos = [];
     
     function openEditAlbumModal(id) {
@@ -776,15 +792,15 @@
       });
     }
 
-    async function saveEditAlbumPhotos() {
+    function saveEditAlbumPhotos() {
       const album = appData.projectAlbums.find(a => a.id === activeEditAlbumId);
       if (album) {
         album.photos = [...stagedExistingPhotos, ...editNewPhotos];
         closeEditAlbumModal(); 
-        await triggerAutoSync();
         renderGallery(); 
         renderManagerAlbumList(); 
         alert('사진이 정상적으로 업데이트되었습니다!');
+        triggerAutoSync(); // 즉시 화면에 반영 후 백그라운드 통신
       }
     }
 
@@ -806,7 +822,7 @@
     
     function closeNewProjectModal() { document.getElementById('project-modal').classList.add('hidden'); }
     
-    async function saveNewProject(e) {
+    function saveNewProject(e) {
       e.preventDefault();
       const newProj = {
         id: String(Date.now()), 
@@ -824,7 +840,10 @@
         totalAmount: Number(document.getElementById('new-proj-total').value || 0), 
         extraAmount: 0, depositAmount: 0, extraItems: []
       };
-      appData.projects.unshift(newProj); closeNewProjectModal(); await triggerAutoSync(); renderProjects();
+      appData.projects.unshift(newProj); 
+      closeNewProjectModal(); 
+      renderProjects();
+      triggerAutoSync(); // 백그라운드 동기화
     }
 
     let activeDetailProjectId = null;
@@ -846,13 +865,16 @@
     
     function closeProjectDetailModal() { document.getElementById('project-detail-modal').classList.add('hidden'); }
     
-    async function updateSettlement() {
+    function updateSettlement() {
       const p = appData.projects.find(p => p.id === activeDetailProjectId); if(!p) return;
       p.totalAmount = Number(document.getElementById('settle-total').value || 0);
       p.extraAmount = Number(document.getElementById('settle-extra').value || 0);
       p.depositAmount = Number(document.getElementById('settle-deposit').value || 0);
-      updateSettlementDisplay(); await triggerAutoSync(); renderProjects();
+      updateSettlementDisplay(); 
+      renderProjects();
+      triggerAutoSync(); // 백그라운드 동기화
     }
+    
     function updateSettlementDisplay() {
       const p = appData.projects.find(p => p.id === activeDetailProjectId); if(!p) return;
       document.getElementById('settle-balance').innerText = ((p.totalAmount + p.extraAmount) - p.depositAmount).toLocaleString() + ' 원';
@@ -863,7 +885,7 @@
       tbody.innerHTML = ''; let totalBal = 0;
       appData.projects.forEach(proj => {
         const bal = (proj.totalAmount + (proj.extraAmount||0)) - (proj.depositAmount||0); totalBal += bal;
-        tbody.innerHTML += `<tr class="hover:bg-slate-50 cursor-pointer border-b" onclick="openProjectDetail('${proj.id}')"><td class="p-3 font-bold text-skybrand-600">${proj.title}</td><td class="p-3">${proj.client}</td><td class="p-3 font-black text-rose-600">${bal.toLocaleString()} 원</td><td class="p-3">진행중</td><td class="p-3 text-right"><button onclick="event.stopPropagation(); deleteProject('${proj.id}')" class="text-rose-500 font-bold">삭제</button></td></tr>`;
+        tbody.innerHTML += `<tr class="hover:bg-slate-50 cursor-pointer border-b" onclick="openProjectDetail('${proj.id}')"><td class="p-3 font-bold text-skybrand-600">${proj.title}</td><td class="p-3">${proj.client}</td><td class="p-3 font-black text-rose-600">${bal.toLocaleString()} 원</td><td class="p-3">진행중</td><td class="p-3 text-right"><button type="button" onclick="event.stopPropagation(); deleteProject('${proj.id}')" class="text-rose-500 font-bold hover:bg-rose-50 px-2 py-1 rounded">삭제</button></td></tr>`;
       });
       document.getElementById('total-outstanding-balance').innerText = totalBal.toLocaleString() + ' 원';
     }
@@ -881,14 +903,19 @@
       const proj = appData.projects.find(p => p.id === activeDetailProjectId);
       document.getElementById('pdf-title').innerText = proj.title; document.getElementById('pdf-supply').innerText = s.toLocaleString()+' 원';
       document.getElementById('pdf-vat').innerText = v.toLocaleString()+' 원'; document.getElementById('pdf-export-modal').classList.remove('hidden');
+      
       appData.taxInvoices.unshift({ id: Date.now(), title: proj.title, client: proj.client, grandTotal: s+v, date: new Date().toLocaleString() });
-      triggerAutoSync(); window.print(); document.getElementById('pdf-export-modal').classList.add('hidden'); renderTaxInvoiceList();
+      renderTaxInvoiceList();
+      triggerAutoSync(); // 백그라운드 동기화
+      
+      window.print(); 
+      document.getElementById('pdf-export-modal').classList.add('hidden'); 
     }
     function renderTaxInvoiceList() {
       const tbody = document.getElementById('tax-table-body'); if (!tbody) return;
       tbody.innerHTML = '';
       appData.taxInvoices.forEach(inv => {
-        tbody.innerHTML += `<tr class="border-b"><td class="p-3">${inv.date}</td><td class="p-3 font-bold text-skybrand-600 cursor-pointer hover:underline" onclick="openTaxInvoiceDetail(${inv.id})">${inv.title}</td><td class="p-3">${inv.client}</td><td class="p-3 font-bold">${inv.grandTotal.toLocaleString()}원</td><td class="p-3 text-right"><button onclick="deleteTaxInvoice(${inv.id})" class="text-rose-500 font-bold">삭제</button></td></tr>`;
+        tbody.innerHTML += `<tr class="border-b"><td class="p-3">${inv.date}</td><td class="p-3 font-bold text-skybrand-600 cursor-pointer hover:underline" onclick="openTaxInvoiceDetail(${inv.id})">${inv.title}</td><td class="p-3">${inv.client}</td><td class="p-3 font-bold">${inv.grandTotal.toLocaleString()}원</td><td class="p-3 text-right"><button type="button" onclick="deleteTaxInvoice(${inv.id})" class="text-rose-500 font-bold hover:bg-rose-50 px-2 py-1 rounded">삭제</button></td></tr>`;
       });
     }
 
@@ -902,27 +929,92 @@
     }
     function closeTaxInvoiceDetailModal() { document.getElementById('tax-invoice-detail-modal').classList.add('hidden'); }
 
-    // --- 공용 삭제 로직 ---
-    async function deleteProject(id) { if(confirm('삭제하시겠습니까?')) { appData.projects = appData.projects.filter(p => p.id !== String(id)); await triggerAutoSync(); renderProjects(); } }
-    async function deleteProjectAlbum(id) { if(confirm('앨범을 정말 삭제하시겠습니까?')) { appData.projectAlbums = appData.projectAlbums.filter(a => a.id !== String(id)); await triggerAutoSync(); renderGallery(); renderManagerAlbumList(); } }
-    async function deleteTaxInvoice(id) { if(confirm('기록을 삭제할까요?')) { appData.taxInvoices = appData.taxInvoices.filter(i => i.id !== id); await triggerAutoSync(); renderTaxInvoiceList(); } }
+    // --- 공용 삭제 로직 (즉각적인 렌더링 업데이트 적용 완료) ---
+    function deleteProject(id) { 
+      if(confirm('삭제하시겠습니까?')) { 
+        appData.projects = appData.projects.filter(p => p.id !== String(id)); 
+        renderProjects(); // 즉시 화면에 삭제 반영
+        triggerAutoSync(); // 클라우드에 백그라운드 전송
+      } 
+    }
+    function deleteProjectAlbum(id) { 
+      if(confirm('앨범을 정말 삭제하시겠습니까?')) { 
+        appData.projectAlbums = appData.projectAlbums.filter(a => a.id !== String(id)); 
+        renderGallery(); 
+        renderManagerAlbumList(); // 즉시 화면에 삭제 반영
+        triggerAutoSync(); 
+      } 
+    }
+    function deleteTaxInvoice(id) { 
+      if(confirm('기록을 삭제할까요?')) { 
+        appData.taxInvoices = appData.taxInvoices.filter(i => i.id !== id); 
+        renderTaxInvoiceList(); // 즉시 화면에 삭제 반영
+        triggerAutoSync(); 
+      } 
+    }
 
     function switchTab(t) {
       ['project', 'photos', 'tax'].forEach(tab => {
         document.getElementById(`tab-content-${tab}`).classList.toggle('hidden', tab !== t);
-        document.getElementById(`tab-btn-${tab}`).className = tab === t ? "px-5 py-3 rounded-t-xl bg-white text-skybrand-600 border-t-2 border-skybrand-600 shadow-sm" : "px-5 py-3 rounded-t-xl bg-slate-200 text-slate-600 hover:bg-slate-300 transition-all";
+        document.getElementById(`tab-btn-${tab}`).className = tab === t ? "px-5 py-3 rounded-t-xl bg-white text-skybrand-600 border-t-2 border-skybrand-600 shadow-sm transition-all" : "px-5 py-3 rounded-t-xl bg-slate-200 text-slate-600 hover:bg-slate-300 transition-all";
       });
       if(t==='photos') renderManagerAlbumList(); if(t==='project') renderProjects(); if(t==='tax') renderTaxInvoiceList();
     }
 
-    // --- 라이트박스 ---
+    // --- [복구 완료] 라이트박스 다중 이미지 지원 로직 ---
+    let activeLightboxAlbum = null; 
+    let activeLightboxIndex = 0;
+
     function openLightbox(albumId) {
-      const a = appData.projectAlbums.find(a => String(a.id) === String(albumId));
-      if (!a || !a.photos || a.photos.length === 0) return;
-      document.getElementById('lb-title').innerText = a.title; document.getElementById('lb-image').src = a.photos[0];
+      activeLightboxAlbum = appData.projectAlbums.find(a => String(a.id) === String(albumId));
+      if (!activeLightboxAlbum || !activeLightboxAlbum.photos || activeLightboxAlbum.photos.length === 0) return;
+      activeLightboxIndex = 0; 
+      
+      document.getElementById('lb-title').innerText = activeLightboxAlbum.title;
+      document.getElementById('lb-category').innerText = activeLightboxAlbum.category;
+      document.getElementById('lb-desc').innerText = activeLightboxAlbum.desc || '';
+      
+      updateLightboxView();
       document.getElementById('lightbox-modal').classList.remove('hidden');
+      lucide.createIcons();
     }
-    function closeLightbox() { document.getElementById('lightbox-modal').classList.add('hidden'); }
+
+    function updateLightboxView() {
+      if (!activeLightboxAlbum) return;
+      const photos = activeLightboxAlbum.photos;
+      
+      // 메인 이미지 및 카운터 업데이트
+      document.getElementById('lb-image').src = photos[activeLightboxIndex];
+      document.getElementById('lb-counter').innerText = `${activeLightboxIndex + 1} / ${photos.length}`;
+      
+      // 썸네일 바 업데이트
+      const thumbBar = document.getElementById('lb-thumbnail-bar'); 
+      thumbBar.innerHTML = '';
+      photos.forEach((p, idx) => {
+        const img = document.createElement('img'); 
+        img.src = p;
+        img.className = `w-14 h-14 rounded-lg object-cover cursor-pointer border-2 transition-all ${idx === activeLightboxIndex ? 'border-skybrand-500 scale-105' : 'border-transparent opacity-50 hover:opacity-100'}`;
+        img.onclick = () => { activeLightboxIndex = idx; updateLightboxView(); }; 
+        thumbBar.appendChild(img);
+      });
+    }
+
+    function nextLightboxImage() { 
+      if (!activeLightboxAlbum) return; 
+      activeLightboxIndex = (activeLightboxIndex + 1) % activeLightboxAlbum.photos.length; 
+      updateLightboxView(); 
+    }
+    
+    function prevLightboxImage() { 
+      if (!activeLightboxAlbum) return; 
+      activeLightboxIndex = (activeLightboxIndex - 1 + activeLightboxAlbum.photos.length) % activeLightboxAlbum.photos.length; 
+      updateLightboxView(); 
+    }
+
+    function closeLightbox() { 
+      document.getElementById('lightbox-modal').classList.add('hidden'); 
+      activeLightboxAlbum = null; 
+    }
 
   </script>
 </body>
