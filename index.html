@@ -66,7 +66,7 @@
   <!-- TOP HEADER -->
   <header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-      <a href="#hero" class="flex flex-col">
+      <a href="#" onclick="window.scrollTo({ top: 0, behavior: 'smooth' }); return false;" class="flex flex-col">
         <div class="flex items-baseline gap-2">
           <span class="text-2xl sm:text-3xl font-black tracking-tight text-skybrand-600">광진유한회사</span>
           <span class="text-xs font-semibold text-slate-400 uppercase tracking-widest hidden sm:inline-block">Gwangjin Co., Ltd</span>
@@ -77,12 +77,13 @@
         </div>
       </a>
       <nav class="hidden md:flex items-center gap-7 text-sm font-semibold text-slate-600">
-        <a href="#about" class="hover:text-skybrand-600 transition-colors">회사소개</a>
+        <!-- 💡 회사소개 클릭 시 최상단으로 부드럽게 이동하도록 변경 -->
+        <a href="#" onclick="window.scrollTo({ top: 0, behavior: 'smooth' }); return false;" class="hover:text-skybrand-600 transition-colors">회사소개</a>
         <a href="#portfolio" class="text-skybrand-600 font-bold hover:text-skybrand-700 transition-colors flex items-center gap-1">
           <i data-lucide="camera" class="w-4 h-4"></i><span>시공사례 갤러리</span>
         </a>
         <a href="#process" class="hover:text-skybrand-600 transition-colors">공사프로세스</a>
-        <a href="#contact" class="hover:text-skybrand-600 transition-colors">현장견적문의</a>
+        <!-- 현장견적문의 메뉴 삭제됨 -->
       </nav>
       <div class="flex items-center gap-3">
         <a href="tel:010-9039-0400" class="flex items-center gap-2 bg-skybrand-50 hover:bg-skybrand-100 text-skybrand-600 border border-skybrand-200 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm shadow-sm transition-all">
@@ -254,7 +255,8 @@
   <footer class="bg-white border-t py-8">
     <div class="max-w-7xl mx-auto px-4 flex justify-between items-center">
       <p class="text-xs text-slate-500">광진유한회사 가스시설시공업 제1종</p>
-      <button onclick="openPasswordModal()" class="px-3.5 py-2 bg-slate-100 rounded-xl text-xs font-bold text-slate-600 transition-all hover:bg-slate-200">관제실 바로가기</button>
+      <!-- 💡 푸터 글씨 강희성부장으로 변경 -->
+      <button onclick="openPasswordModal()" class="px-3.5 py-2 bg-slate-100 rounded-xl text-xs font-bold text-slate-600 transition-all hover:bg-slate-200">강희성부장</button>
     </div>
   </footer>
 
@@ -1047,7 +1049,8 @@
     }
     
     function openNewProjectModal() { 
-      document.getElementById('project-modal').classList.remove('hidden'); document.getElementById('new-proj-date').valueAsDate = new Date();
+      document.getElementById('project-modal').classList.remove('hidden'); 
+      document.getElementById('new-proj-date').valueAsDate = new Date();
       document.getElementById('new-proj-year').value = new Date().getFullYear();
       ['new-proj-title','new-proj-addr','new-proj-client','new-proj-client-bizno','new-proj-client-phone','new-proj-client-email','new-proj-owner','new-proj-phone','new-proj-owner-email'].forEach(id => { if(document.getElementById(id)) document.getElementById(id).value = ''; });
       document.getElementById('new-proj-supply').value = '3000000'; calcNewProjTotal(); 
@@ -1057,12 +1060,22 @@
     function saveNewProject(e) {
       e.preventDefault();
       const newProj = {
-        id: String(Date.now()), year: document.getElementById('new-proj-year').value, isCompleted: false, 
-        title: document.getElementById('new-proj-title').value.trim(), addr: document.getElementById('new-proj-addr').value.trim(),
-        client: document.getElementById('new-proj-client').value.trim(), clientBizNo: document.getElementById('new-proj-client-bizno').value.trim(), clientPhone: document.getElementById('new-proj-client-phone').value.trim(), clientEmail: document.getElementById('new-proj-client-email').value.trim(),
-        owner: document.getElementById('new-proj-owner').value.trim(), phone: document.getElementById('new-proj-phone').value.trim(), ownerEmail: document.getElementById('new-proj-owner-email').value.trim(),
-        category: document.getElementById('new-proj-category').value, date: document.getElementById('new-proj-date').value || new Date().toISOString().slice(0, 10),
-        totalAmount: Number(document.getElementById('new-proj-total').value || 0), extraAmount: 0, depositAmount: 0, 
+        id: String(Date.now()), 
+        year: document.getElementById('new-proj-year').value, 
+        isCompleted: false, 
+        title: document.getElementById('new-proj-title').value.trim(), 
+        addr: document.getElementById('new-proj-addr').value.trim(),
+        client: document.getElementById('new-proj-client').value.trim(), 
+        clientBizNo: document.getElementById('new-proj-client-bizno').value.trim(), 
+        clientPhone: document.getElementById('new-proj-client-phone').value.trim(), 
+        clientEmail: document.getElementById('new-proj-client-email').value.trim(),
+        owner: document.getElementById('new-proj-owner').value.trim(), 
+        phone: document.getElementById('new-proj-phone').value.trim(), 
+        ownerEmail: document.getElementById('new-proj-owner-email').value.trim(),
+        category: document.getElementById('new-proj-category').value, 
+        date: document.getElementById('new-proj-date').value || new Date().toISOString().slice(0, 10),
+        totalAmount: Number(document.getElementById('new-proj-total').value || 0), 
+        extraAmount: 0, depositAmount: 0, 
         extraAmountsList: [], depositAmountsList: [], contractDocsList: [], extraItems: [], bizLicense: "", contractDoc: ""
       };
       appData.projects.unshift(newProj); closeNewProjectModal(); renderProjects(); triggerAutoSync(); 
