@@ -253,7 +253,7 @@
     </div>
   </div>
 
-  <!-- [업데이트 됨] 현장 공정 등록 모달 -->
+  <!-- [현장 공정 등록 모달] -->
   <div id="project-modal" class="fixed inset-0 z-50 bg-slate-900/60 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl p-6 max-w-2xl w-full border shadow-2xl overflow-y-auto max-h-[92vh]">
       <div class="flex justify-between items-center mb-4 pb-2 border-b">
@@ -268,7 +268,7 @@
           <div><label class="block font-bold mb-1">공사 주소</label><input type="text" id="new-proj-addr" required class="w-full bg-slate-50 border p-2 rounded-xl"></div>
         </div>
         
-        <!-- 공급받는자 (세금계산서 발행처) 분리 -->
+        <!-- 공급받는자 분리 -->
         <div class="bg-skybrand-50/50 border border-skybrand-200 p-3 rounded-xl space-y-3">
           <h4 class="font-bold text-skybrand-700 text-[11px] mb-1">■ 공급받는자 정보 (세금계산서 발행처)</h4>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -279,13 +279,13 @@
           </div>
         </div>
         
-        <!-- 발주처 (현장 담당자) 분리 -->
+        <!-- 발주처 분리 -->
         <div class="bg-slate-50 border border-slate-200 p-3 rounded-xl space-y-3">
-          <h4 class="font-bold text-slate-700 text-[11px] mb-1">■ 발주처 (현장 담당자)</h4>
+          <h4 class="font-bold text-slate-700 text-[11px] mb-1">■ 발주처</h4>
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div><label class="block font-bold mb-1">담당자 성명</label><input type="text" id="new-proj-owner" required class="w-full bg-white border p-2 rounded-xl"></div>
-            <div><label class="block font-bold mb-1">담당자 연락처</label><input type="tel" id="new-proj-phone" maxlength="13" required oninput="formatPhoneNumber(this)" class="w-full bg-white border p-2 rounded-xl"></div>
-            <div><label class="block font-bold mb-1">담당자 이메일</label><input type="email" id="new-proj-owner-email" class="w-full bg-white border p-2 rounded-xl"></div>
+            <div><label class="block font-bold mb-1">성명</label><input type="text" id="new-proj-owner" required class="w-full bg-white border p-2 rounded-xl"></div>
+            <div><label class="block font-bold mb-1">연락처</label><input type="tel" id="new-proj-phone" maxlength="13" required oninput="formatPhoneNumber(this)" class="w-full bg-white border p-2 rounded-xl"></div>
+            <div><label class="block font-bold mb-1">이메일</label><input type="email" id="new-proj-owner-email" class="w-full bg-white border p-2 rounded-xl"></div>
           </div>
         </div>
 
@@ -329,7 +329,7 @@
     </div>
   </div>
 
-  <!-- [업데이트 됨] 현장 상세 관리 모달 -->
+  <!-- [현장 상세 관리 모달] -->
   <div id="project-detail-modal" class="fixed inset-0 z-50 bg-slate-900/70 hidden flex items-center justify-center p-2 sm:p-4">
     <div class="bg-white rounded-3xl max-w-4xl w-full border shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
       <div class="p-6 border-b flex justify-between items-center bg-slate-50 shrink-0">
@@ -347,7 +347,7 @@
             <div id="detail-client-contact" class="text-xs text-slate-600 mt-0.5"></div>
           </div>
           <div>
-            <span class="text-[11px] font-bold text-slate-500 block mb-1">■ 발주처 (담당자)</span>
+            <span class="text-[11px] font-bold text-slate-500 block mb-1">■ 발주처</span>
             <div id="detail-owner" class="text-sm font-black text-slate-900"></div>
             <div id="detail-owner-contact" class="text-xs text-slate-600 mt-0.5"></div>
           </div>
@@ -453,6 +453,7 @@ const firebaseConfig = {
   messagingSenderId: "440039081574",
   appId: "1:440039081574:web:1f0551ddc5c3f93e0b0fa7"
 };
+
 
     let fbDb = null;
     let fbStorage = null;
@@ -648,7 +649,7 @@ const firebaseConfig = {
     function logoutManagerMode() {
       document.getElementById('view-manager').classList.add('hidden');
       document.getElementById('view-public').classList.remove('hidden');
-      filterGallery(currentFilter);
+      filterGallery(currentFilter); // 메인 강제 새로고침
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
@@ -836,7 +837,7 @@ const firebaseConfig = {
       }
       renderEditAlbumGrid();
 
-      icon.setAttribute('data-lucide', 'image-plus'); icon.classList.remove('animate-spin'); text.innerText = "사진 선택"; lucide.createIcons();
+      icon.setAttribute('data-lucide', 'image-plus'); icon.classList.remove('animate-spin'); text.innerText = "사진 선택 (자동 압축됨)"; lucide.createIcons();
       input.value = '';
     }
 
