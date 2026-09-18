@@ -8,7 +8,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
 
-  <!-- 파이어베이스 데이터베이스 + [추가] 스토리지(이미지 창고) 라이브러리 -->
+  <!-- 파이어베이스 호환 라이브러리 -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
@@ -168,6 +168,7 @@
         <div>
           <div class="flex flex-wrap items-center gap-2 mb-2">
             <span class="px-3 py-1 bg-skybrand-100 text-skybrand-700 text-xs font-bold rounded-lg border">광진유한회사 기술시공본부</span>
+            <!-- 상태 뱃지 -->
             <span id="sync-cloud-badge" class="px-3 py-0.5 rounded-full text-[11px] font-black bg-slate-100 text-slate-500 border border-slate-300">안전 로컬 모드 작동중</span>
           </div>
           <h2 class="text-2xl font-black text-slate-900">강희성 부장 현장 총괄 관제실</h2>
@@ -252,26 +253,53 @@
     </div>
   </div>
 
-  <!-- [현장 공정 등록 모달] -->
+  <!-- [업데이트 됨] 현장 공정 등록 모달 -->
   <div id="project-modal" class="fixed inset-0 z-50 bg-slate-900/60 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl p-6 max-w-2xl w-full border shadow-2xl overflow-y-auto max-h-[92vh]">
-      <div class="flex justify-between items-center mb-4 pb-2 border-b"><h3 class="text-base font-black">신규 현장 등록</h3><button type="button" onclick="closeNewProjectModal()"><i data-lucide="x" class="w-5 h-5 text-slate-400"></i></button></div>
+      <div class="flex justify-between items-center mb-4 pb-2 border-b">
+        <h3 class="text-base font-black">신규 현장 및 정밀 계약 등록</h3>
+        <button type="button" onclick="closeNewProjectModal()"><i data-lucide="x" class="w-5 h-5 text-slate-400"></i></button>
+      </div>
       <form onsubmit="saveNewProject(event)" class="space-y-4 text-xs">
-        <div class="grid grid-cols-2 gap-3">
-          <div><label class="block font-bold mb-1">공사명</label><input type="text" id="new-proj-title" required class="w-full bg-slate-50 border p-2 rounded-xl"></div>
-          <div><label class="block font-bold mb-1">주소</label><input type="text" id="new-proj-addr" required class="w-full bg-slate-50 border p-2 rounded-xl"></div>
+        
+        <!-- 기본 정보 -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-2">
+          <div><label class="block font-bold mb-1">공사명 (현장명)</label><input type="text" id="new-proj-title" required class="w-full bg-slate-50 border p-2 rounded-xl"></div>
+          <div><label class="block font-bold mb-1">공사 주소</label><input type="text" id="new-proj-addr" required class="w-full bg-slate-50 border p-2 rounded-xl"></div>
         </div>
-        <div class="grid grid-cols-2 gap-3">
-          <div><label class="block font-bold mb-1">상호(공급받는자)</label><input type="text" id="new-proj-client" required class="w-full bg-slate-50 border p-2 rounded-xl"></div>
-          <div><label class="block font-bold mb-1">사업자번호</label><input type="text" id="new-proj-client-bizno" class="w-full bg-slate-50 border p-2 rounded-xl"></div>
+        
+        <!-- 공급받는자 (세금계산서 발행처) 분리 -->
+        <div class="bg-skybrand-50/50 border border-skybrand-200 p-3 rounded-xl space-y-3">
+          <h4 class="font-bold text-skybrand-700 text-[11px] mb-1">■ 공급받는자 정보 (세금계산서 발행처)</h4>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div><label class="block font-bold mb-1">상호(법인명)</label><input type="text" id="new-proj-client" required class="w-full bg-white border p-2 rounded-xl"></div>
+            <div><label class="block font-bold mb-1">사업자번호</label><input type="text" id="new-proj-client-bizno" class="w-full bg-white border p-2 rounded-xl"></div>
+            <div><label class="block font-bold mb-1">회사 전화번호</label><input type="tel" id="new-proj-client-phone" maxlength="13" oninput="formatPhoneNumber(this)" class="w-full bg-white border p-2 rounded-xl"></div>
+            <div><label class="block font-bold mb-1">회사 이메일</label><input type="email" id="new-proj-client-email" class="w-full bg-white border p-2 rounded-xl"></div>
+          </div>
         </div>
-        <div class="grid grid-cols-3 gap-3">
-          <div><label class="block font-bold mb-1">담당자 성명</label><input type="text" id="new-proj-owner" required class="w-full bg-slate-50 border p-2 rounded-xl"></div>
-          <div><label class="block font-bold mb-1">담당자 연락처</label><input type="tel" id="new-proj-phone" required class="w-full bg-slate-50 border p-2 rounded-xl"></div>
+        
+        <!-- 발주처 (현장 담당자) 분리 -->
+        <div class="bg-slate-50 border border-slate-200 p-3 rounded-xl space-y-3">
+          <h4 class="font-bold text-slate-700 text-[11px] mb-1">■ 발주처 (현장 담당자)</h4>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div><label class="block font-bold mb-1">담당자 성명</label><input type="text" id="new-proj-owner" required class="w-full bg-white border p-2 rounded-xl"></div>
+            <div><label class="block font-bold mb-1">담당자 연락처</label><input type="tel" id="new-proj-phone" maxlength="13" required oninput="formatPhoneNumber(this)" class="w-full bg-white border p-2 rounded-xl"></div>
+            <div><label class="block font-bold mb-1">담당자 이메일</label><input type="email" id="new-proj-owner-email" class="w-full bg-white border p-2 rounded-xl"></div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+          <div><label class="block font-bold mb-1">시공 분야</label><select id="new-proj-category" class="w-full bg-slate-50 border p-2 rounded-xl font-bold"><option value="가정용">가정용</option><option value="상가/빌딩">상가/빌딩</option><option value="배관철거(지역 재개발)">배관철거(지역 재개발)</option><option value="유지보수">유지보수</option></select></div>
+          <div><label class="block font-bold mb-1">계약일자</label><input type="date" id="new-proj-date" class="w-full bg-slate-50 border p-2 rounded-xl"></div>
           <div><label class="block font-bold mb-1">공급가액</label><input type="number" id="new-proj-supply" required value="3000000" oninput="calcNewProjTotal()" class="w-full bg-slate-50 border p-2 rounded-xl font-bold"></div>
+          <div><label class="block font-bold mb-1">총공사금액(VAT포함)</label><input type="number" id="new-proj-total" readonly class="w-full bg-skybrand-50 border p-2 rounded-xl font-black text-skybrand-600"></div>
         </div>
-        <div><label class="block font-bold mb-1">총공사금액(VAT포함)</label><input type="number" id="new-proj-total" readonly class="w-full bg-skybrand-50 border p-2 rounded-xl font-black text-skybrand-600"></div>
-        <div class="flex gap-2 pt-2"><button type="button" onclick="closeNewProjectModal()" class="flex-1 py-2.5 bg-slate-100 rounded-xl font-bold">취소</button><button type="submit" class="flex-1 py-2.5 bg-skybrand-600 text-white rounded-xl font-bold">등록 완료</button></div>
+        
+        <div class="flex gap-2 pt-2">
+          <button type="button" onclick="closeNewProjectModal()" class="flex-1 py-2.5 bg-slate-100 rounded-xl font-bold">취소</button>
+          <button type="submit" class="flex-1 py-2.5 bg-skybrand-600 text-white rounded-xl font-bold">등록 완료</button>
+        </div>
       </form>
     </div>
   </div>
@@ -301,7 +329,7 @@
     </div>
   </div>
 
-  <!-- [현장 상세 관리 모달] -->
+  <!-- [업데이트 됨] 현장 상세 관리 모달 -->
   <div id="project-detail-modal" class="fixed inset-0 z-50 bg-slate-900/70 hidden flex items-center justify-center p-2 sm:p-4">
     <div class="bg-white rounded-3xl max-w-4xl w-full border shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
       <div class="p-6 border-b flex justify-between items-center bg-slate-50 shrink-0">
@@ -312,9 +340,17 @@
         </div>
       </div>
       <div class="p-6 overflow-y-auto space-y-6 flex-grow text-xs sm:text-sm">
-        <div class="grid grid-cols-2 gap-4 bg-skybrand-50/60 p-4 rounded-2xl border">
-          <div><span class="text-[11px] font-bold text-skybrand-700 block">■ 공급받는자</span><div id="detail-client" class="font-black"></div></div>
-          <div><span class="text-[11px] font-bold text-slate-500 block">■ 발주처</span><div id="detail-owner" class="font-black"></div></div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-skybrand-50/60 p-4 rounded-2xl border">
+          <div>
+            <span class="text-[11px] font-bold text-skybrand-700 block mb-1">■ 공급받는자</span>
+            <div id="detail-client" class="text-sm font-black text-slate-900"></div>
+            <div id="detail-client-contact" class="text-xs text-slate-600 mt-0.5"></div>
+          </div>
+          <div>
+            <span class="text-[11px] font-bold text-slate-500 block mb-1">■ 발주처 (담당자)</span>
+            <div id="detail-owner" class="text-sm font-black text-slate-900"></div>
+            <div id="detail-owner-contact" class="text-xs text-slate-600 mt-0.5"></div>
+          </div>
         </div>
         <div class="bg-white rounded-2xl p-5 border shadow-sm space-y-4">
           <h4 class="font-black text-sm">금액 정산</h4>
@@ -339,7 +375,7 @@
           <div id="btn-edit-file-input" class="border-2 border-dashed p-3 text-center cursor-pointer hover:bg-slate-50" onclick="document.getElementById('edit-file-input').click()">
             <input type="file" id="edit-file-input" accept="image/*" multiple onchange="handleEditFilesSelect(this)" class="hidden">
             <i id="icon-edit-file" data-lucide="image-plus" class="w-6 h-6 text-skybrand-500 mx-auto mb-1"></i>
-            <p id="text-edit-file" class="font-bold">사진 선택</p>
+            <p id="text-edit-file" class="font-bold">사진 선택 (자동 압축됨)</p>
           </div>
           <div id="edit-new-grid" class="grid grid-cols-4 gap-2 mt-2"></div>
         </div>
@@ -403,7 +439,7 @@
 
   <script>
     /* =========================================================
-       JavaScript 로직 (강력한 사진 압축 & Firebase Storage 연동)
+       JavaScript 로직
        ========================================================= */
     const SECRET_PIN = "1270";
     const NO_IMAGE_PLACEHOLDER = "data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22600%22%20height%3D%22400%22%3E%3Crect%20fill%3D%22%23f1f5f9%22%20width%3D%22600%22%20height%3D%22400%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20text-anchor%3D%22middle%22%20font-size%3D%2218%22%20font-weight%3D%22bold%22%20fill%3D%22%23cbd5e1%22%3E%EB%93%B1%EB%A1%9D%EB%90%9C%20%EC%82%AC%EC%A7%84%20%EC%97%86%EC%9D%8C%3C%2Ftext%3E%3C%2Fsvg%3E";
@@ -431,6 +467,24 @@ const firebaseConfig = {
       }
     } catch(e) { console.warn("Firebase Init Error", e); }
 
+    // --- 전화번호 자동 하이픈 함수 ---
+    function formatPhoneNumber(target) {
+        let val = target.value.replace(/[^0-9]/g, '');
+        let res = '';
+        if(val.startsWith('02')) {
+            if(val.length < 3) res = val;
+            else if(val.length < 6) res = val.substr(0,2) + '-' + val.substr(2);
+            else if(val.length < 10) res = val.substr(0,2) + '-' + val.substr(2,3) + '-' + val.substr(5);
+            else res = val.substr(0,2) + '-' + val.substr(2,4) + '-' + val.substr(6,4);
+        } else {
+            if(val.length < 4) res = val;
+            else if(val.length < 7) res = val.substr(0,3) + '-' + val.substr(3);
+            else if(val.length < 11) res = val.substr(0,3) + '-' + val.substr(3,3) + '-' + val.substr(6);
+            else res = val.substr(0,3) + '-' + val.substr(3,4) + '-' + val.substr(7,4);
+        }
+        target.value = res;
+    }
+
     // --- 데이터 로드 ---
     let appData = {
       projects: JSON.parse(localStorage.getItem('gwangjin_projects')) || [],
@@ -440,23 +494,36 @@ const firebaseConfig = {
       taxInvoices: JSON.parse(localStorage.getItem('gwangjin_tax_invoices')) || []
     };
 
-    // --- 페이지 렌더링 시 최신 데이터 자동 동기화 (대외용 포함) ---
+    // --- 페이지 렌더링 시 최신 데이터 자동 동기화 ---
     document.addEventListener('DOMContentLoaded', async () => {
       lucide.createIcons();
       filterGallery('전체');
       renderProjects();
       renderTaxInvoiceList();
 
-      // 외부 기기 접속 시에도 클라우드에서 바로 최신화
       if (isFirebaseReady && fbDb) {
         try {
           const docSnap = await fbDb.collection("gwangjin").doc("portal_data").get();
           if (docSnap.exists) {
             const cloudData = docSnap.data();
             if (cloudData.projects) appData.projects = cloudData.projects;
-            if (cloudData.projectAlbums) appData.projectAlbums = cloudData.projectAlbums;
             if (cloudData.taxInvoices) appData.taxInvoices = cloudData.taxInvoices;
             
+            if (cloudData.projectAlbumsMeta) {
+              let loadedAlbums = [];
+              for (const meta of cloudData.projectAlbumsMeta) {
+                let albumPhotos = [];
+                try {
+                  const photoDoc = await fbDb.collection("gwangjin_albums").doc(String(meta.id)).get();
+                  if (photoDoc.exists) albumPhotos = photoDoc.data().photos || [];
+                } catch(e) {}
+                loadedAlbums.push({ ...meta, photos: albumPhotos });
+              }
+              appData.projectAlbums = loadedAlbums;
+            } else if (cloudData.projectAlbums) {
+              appData.projectAlbums = cloudData.projectAlbums;
+            }
+
             localStorage.setItem('gwangjin_projects', JSON.stringify(appData.projects));
             localStorage.setItem('gwangjin_project_albums', JSON.stringify(appData.projectAlbums));
             localStorage.setItem('gwangjin_tax_invoices', JSON.stringify(appData.taxInvoices));
@@ -467,7 +534,7 @@ const firebaseConfig = {
       }
     });
 
-    // --- 동기화 및 백업 (Storage URL만 저장하여 1MB 회피) ---
+    // --- 동기화 및 백업 (1MB 회피) ---
     async function triggerAutoSync() {
       try {
         localStorage.setItem('gwangjin_projects', JSON.stringify(appData.projects));
@@ -477,30 +544,55 @@ const firebaseConfig = {
 
       if (isFirebaseReady && fbDb) {
         try {
-          await fbDb.collection("gwangjin").doc("portal_data").set(appData);
+          let cloudData = {
+            projects: appData.projects,
+            taxInvoices: appData.taxInvoices,
+            projectAlbumsMeta: appData.projectAlbums.map(a => ({ id: a.id, title: a.title, category: a.category, date: a.date, desc: a.desc }))
+          };
+          await fbDb.collection("gwangjin").doc("portal_data").set(cloudData);
+
+          for (const album of appData.projectAlbums) {
+            await fbDb.collection("gwangjin_albums").doc(String(album.id)).set({ photos: album.photos || [] });
+          }
         } catch (err) { console.warn("클라우드 DB 저장 실패", err); }
       }
     }
 
-    async function manualCloudSync() {
+    async function manualCloudSync(isSilent = false) {
       if (!isFirebaseReady) {
-        document.getElementById('import-file-input').click(); 
+        if(!isSilent) document.getElementById('import-file-input').click(); 
         return;
       }
       try {
-        const doc = await fbDb.collection("gwangjin").doc("portal_data").get();
-        if (doc.exists) {
-          const cloudData = doc.data();
+        const docSnap = await fbDb.collection("gwangjin").doc("portal_data").get();
+        if (docSnap.exists) {
+          const cloudData = docSnap.data();
           if (cloudData.projects) appData.projects = cloudData.projects;
-          if (cloudData.projectAlbums) appData.projectAlbums = cloudData.projectAlbums;
           if (cloudData.taxInvoices) appData.taxInvoices = cloudData.taxInvoices;
+          
+          if (cloudData.projectAlbumsMeta) {
+            let loadedAlbums = [];
+            for (const meta of cloudData.projectAlbumsMeta) {
+              let albumPhotos = [];
+              try {
+                const photoDoc = await fbDb.collection("gwangjin_albums").doc(String(meta.id)).get();
+                if (photoDoc.exists) albumPhotos = photoDoc.data().photos || [];
+              } catch(e) {}
+              loadedAlbums.push({ ...meta, photos: albumPhotos });
+            }
+            appData.projectAlbums = loadedAlbums;
+          } else if (cloudData.projectAlbums) {
+            appData.projectAlbums = cloudData.projectAlbums;
+          }
           await triggerAutoSync();
           renderGallery(); renderManagerAlbumList(); renderProjects(); renderTaxInvoiceList();
-          alert('클라우드에서 최신 데이터를 불러왔습니다!');
+          if(!isSilent) alert('클라우드에서 최신 데이터를 불러왔습니다!');
         } else {
           await triggerAutoSync();
         }
-      } catch(e) { alert('동기화 실패: 파이어베이스 권한 설정이나 네트워크를 확인하세요.'); }
+      } catch(e) { 
+        if(!isSilent) alert('동기화 실패: 설정값을 확인하세요.'); 
+      }
     }
 
     function importDataFromFile(input) {
@@ -540,6 +632,7 @@ const firebaseConfig = {
           badge.innerText = "☁️ Firebase 실시간 동기화 활성";
           badge.className = "px-3 py-0.5 rounded-full text-[11px] font-black bg-emerald-100 text-emerald-700 border border-emerald-400";
           syncBtn.innerHTML = `<i data-lucide="cloud-sync" class="w-4 h-4"></i><span>☁️ 클라우드 수동 갱신</span>`;
+          manualCloudSync(true); // 조용히 동기화
         } else {
           badge.innerText = "⚙️ 클라우드 설정 대기중 (로컬 모드)";
           badge.className = "px-3 py-0.5 rounded-full text-[11px] font-black bg-amber-100 text-amber-700 border border-amber-400";
@@ -555,11 +648,11 @@ const firebaseConfig = {
     function logoutManagerMode() {
       document.getElementById('view-manager').classList.add('hidden');
       document.getElementById('view-public').classList.remove('hidden');
-      filterGallery(currentFilter); // 메인 강제 새로고침
+      filterGallery(currentFilter);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // --- [핵심] 고화질 이미지 압축 후 Firebase Storage(클라우드 창고) 업로드 ---
+    // --- 고화질 이미지 압축 및 Storage 업로드 ---
     async function compressImageToBlob(file) {
       return new Promise((resolve) => {
         const reader = new FileReader();
@@ -578,7 +671,7 @@ const firebaseConfig = {
             canvas.width = width; canvas.height = height;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
-            canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.7); // 70% 퀄리티 압축
+            canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.7); 
           };
           img.src = e.target.result;
         };
@@ -589,13 +682,11 @@ const firebaseConfig = {
     async function uploadImageToCloud(file) {
       const blob = await compressImageToBlob(file);
       if (isFirebaseReady && fbStorage) {
-        // 클라우드 Storage에 업로드 후 다운로드 URL(짧은 문자열) 반환
         const storageRef = fbStorage.ref();
         const fileRef = storageRef.child(`gwangjin_photos/img_${Date.now()}_${Math.floor(Math.random()*1000)}.jpg`);
         await fileRef.put(blob);
         return await fileRef.getDownloadURL();
       } else {
-        // 로컬 모드일 경우 Base64 데이터로 반환
         return new Promise((resolve) => {
            const reader = new FileReader();
            reader.onloadend = () => resolve(reader.result);
@@ -782,13 +873,36 @@ const firebaseConfig = {
       const supply = Number(document.getElementById('new-proj-supply').value || 0);
       document.getElementById('new-proj-total').value = supply + Math.floor(supply * 0.1);
     }
-    function openNewProjectModal() { document.getElementById('project-modal').classList.remove('hidden'); calcNewProjTotal(); }
+    
+    function openNewProjectModal() { 
+      document.getElementById('project-modal').classList.remove('hidden'); 
+      document.getElementById('new-proj-date').valueAsDate = new Date();
+      ['new-proj-title','new-proj-addr','new-proj-client','new-proj-client-bizno','new-proj-client-phone','new-proj-client-email','new-proj-owner','new-proj-phone','new-proj-owner-email'].forEach(id => {
+         if(document.getElementById(id)) document.getElementById(id).value = '';
+      });
+      document.getElementById('new-proj-supply').value = '3000000';
+      calcNewProjTotal(); 
+    }
+    
     function closeNewProjectModal() { document.getElementById('project-modal').classList.add('hidden'); }
+    
     async function saveNewProject(e) {
       e.preventDefault();
       const newProj = {
-        id: String(Date.now()), title: document.getElementById('new-proj-title').value, client: document.getElementById('new-proj-client').value,
-        totalAmount: Number(document.getElementById('new-proj-total').value || 0), extraAmount: 0, depositAmount: 0, extraItems: []
+        id: String(Date.now()), 
+        title: document.getElementById('new-proj-title').value.trim(), 
+        addr: document.getElementById('new-proj-addr').value.trim(),
+        client: document.getElementById('new-proj-client').value.trim(),
+        clientBizNo: document.getElementById('new-proj-client-bizno').value.trim(),
+        clientPhone: document.getElementById('new-proj-client-phone').value.trim(),
+        clientEmail: document.getElementById('new-proj-client-email').value.trim(),
+        owner: document.getElementById('new-proj-owner').value.trim(),
+        phone: document.getElementById('new-proj-phone').value.trim(),
+        ownerEmail: document.getElementById('new-proj-owner-email').value.trim(),
+        category: document.getElementById('new-proj-category').value,
+        date: document.getElementById('new-proj-date').value || new Date().toISOString().slice(0, 10),
+        totalAmount: Number(document.getElementById('new-proj-total').value || 0), 
+        extraAmount: 0, depositAmount: 0, extraItems: []
       };
       appData.projects.unshift(newProj); closeNewProjectModal(); await triggerAutoSync(); renderProjects();
     }
@@ -797,11 +911,23 @@ const firebaseConfig = {
     function openProjectDetail(id) {
       const proj = appData.projects.find(p => p.id === String(id));
       if(!proj) return; activeDetailProjectId = proj.id;
-      document.getElementById('detail-title').innerText = proj.title; document.getElementById('detail-client').innerText = proj.client;
-      document.getElementById('settle-total').value = proj.totalAmount || 0; document.getElementById('settle-extra').value = proj.extraAmount || 0; document.getElementById('settle-deposit').value = proj.depositAmount || 0;
+      
+      document.getElementById('detail-title').innerText = proj.title; 
+      
+      document.getElementById('detail-client').innerText = `${proj.client} ${proj.clientBizNo ? `(${proj.clientBizNo})` : ''}`;
+      document.getElementById('detail-client-contact').innerText = `Tel: ${proj.clientPhone || '-'} / Email: ${proj.clientEmail || '-'}`;
+      
+      document.getElementById('detail-owner').innerText = proj.owner;
+      document.getElementById('detail-owner-contact').innerHTML = `<a href="tel:${proj.phone}" class="text-skybrand-600 hover:underline">${proj.phone || '-'}</a> / Email: ${proj.ownerEmail || '-'}`;
+      
+      document.getElementById('settle-total').value = proj.totalAmount || 0; 
+      document.getElementById('settle-extra').value = proj.extraAmount || 0; 
+      document.getElementById('settle-deposit').value = proj.depositAmount || 0;
       updateSettlementDisplay(); document.getElementById('project-detail-modal').classList.remove('hidden');
     }
+    
     function closeProjectDetailModal() { document.getElementById('project-detail-modal').classList.add('hidden'); }
+    
     async function updateSettlement() {
       const p = appData.projects.find(p => p.id === activeDetailProjectId); if(!p) return;
       p.totalAmount = Number(document.getElementById('settle-total').value || 0);
