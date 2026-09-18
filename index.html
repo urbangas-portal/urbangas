@@ -178,8 +178,8 @@
         </div>
         <div class="flex items-center gap-2">
           <button onclick="openChangePinModal()" class="flex items-center gap-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 px-3.5 py-2.5 rounded-xl font-bold text-xs transition-all"><i data-lucide="key" class="w-4 h-4"></i><span>비밀번호 변경</span></button>
-          <button onclick="fetchDriveData(true)" class="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl font-bold text-xs shadow-sm transition-all"><i data-lucide="cloud-sync" class="w-4 h-4"></i><span>동기화</span></button>
-          <button onclick="logoutManagerMode()" class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-900 text-white px-4 py-2.5 rounded-xl font-bold text-xs transition-all"><i data-lucide="log-out" class="w-4 h-4"></i><span>종료</span></button>
+          <button onclick="fetchDriveData(true)" class="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl font-bold text-xs shadow-sm transition-all"><i data-lucide="cloud-sync" class="w-4 h-4"></i><span>구글드라이브 동기화</span></button>
+          <button onclick="logoutManagerMode()" class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-900 text-white px-4 py-2.5 rounded-xl font-bold text-xs transition-all"><i data-lucide="log-out" class="w-4 h-4"></i><span>관제실 종료</span></button>
         </div>
       </div>
 
@@ -389,7 +389,7 @@
     </div>
   </div>
 
-  <!-- [5] 현장 상세 관리 및 수정 모달 (계약서 다중 업로드 및 세로 정산 폼) -->
+  <!-- [5] 현장 상세 관리 및 수정 모달 -->
   <div id="project-detail-modal" class="fixed inset-0 z-50 bg-slate-900/70 hidden flex items-center justify-center p-2 sm:p-4">
     <div class="bg-white rounded-3xl max-w-4xl w-full border shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
       <div class="p-5 sm:p-6 border-b flex justify-between items-center bg-slate-50 shrink-0">
@@ -456,11 +456,20 @@
           </div>
         </div>
 
-        <!-- 💡 1단 세로 정산 보드 -->
+        <!-- 💡 부가세 별도 체크박스가 추가된 정산 보드 -->
         <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-4">
-          <div class="flex justify-between items-center border-b border-slate-100 pb-3">
-            <h4 class="font-black text-sm text-slate-800">금액 정산 및 청구 내역</h4>
-            <div class="bg-rose-50 px-3 py-1.5 rounded-lg border border-rose-100 flex items-center gap-2">
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-100 pb-3 gap-3">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+              <h4 class="font-black text-sm text-slate-800">금액 정산 및 청구 내역</h4>
+              
+              <!-- 💡 신규: 부가세 별도 입력 토글 -->
+              <label class="flex items-center gap-1.5 cursor-pointer bg-skybrand-50 px-2.5 py-1.5 rounded-lg border border-skybrand-200 hover:bg-skybrand-100 transition-colors shadow-sm">
+                <input type="checkbox" id="det-vat-excluded" onchange="updateSettlementDisplayOnly()" class="w-4 h-4 rounded text-skybrand-600 focus:ring-skybrand-500 border-slate-300">
+                <span class="text-xs font-bold text-skybrand-800">입력 금액 부가세 별도 (저장 시 10% 자동가산)</span>
+              </label>
+
+            </div>
+            <div class="bg-rose-50 px-3 py-1.5 rounded-lg border border-rose-100 flex items-center gap-2 shrink-0">
               <span class="text-xs font-bold text-rose-500">현재 최종 잔금</span>
               <span id="settle-balance" class="font-black text-rose-600 text-lg">0 원</span>
             </div>
@@ -495,7 +504,6 @@
           </div>
         </div>
 
-        <!-- 💡 첨부 서류 (사업자등록증 + 계약서 다중 저장) -->
         <div class="bg-slate-50 border border-slate-200 p-4 rounded-xl mt-4 space-y-4">
           <h4 class="font-bold text-slate-700 text-[11px]">■ 첨부 서류 (PDF/이미지 자동 변환 및 다중 저장)</h4>
           
@@ -508,14 +516,12 @@
             <div id="bizLicense-preview" class="h-32 bg-white rounded-xl border border-dashed border-slate-300 flex items-center justify-center text-slate-400 text-xs relative overflow-hidden">없음</div>
           </div>
 
-          <!-- 💡 계약서 다중 업로드 영역 복구 -->
           <div>
             <div class="flex justify-between items-center mb-2">
               <span class="font-bold text-slate-700 text-xs">계약서 및 계산서 사본 <span class="text-[10px] text-skybrand-500">(여러 건 무제한 저장 가능)</span></span>
               <button type="button" onclick="document.getElementById('contract-input').click()" class="text-xs text-skybrand-600 font-bold bg-skybrand-50 px-2 py-1 rounded hover:bg-skybrand-100 transition-colors">+ 서류 추가</button>
               <input type="file" id="contract-input" accept="image/*,application/pdf" multiple onchange="uploadMultiDocuments(this, 'contractDocsList')" class="hidden">
             </div>
-            <!-- 업로드 상태와 미리보기가 나타날 그리드 -->
             <div id="contractDocsList-preview" class="grid grid-cols-3 sm:grid-cols-4 gap-2 bg-white p-3 rounded-xl border border-dashed border-slate-300 min-h-[5rem] items-center">
               <span class="text-xs text-slate-400 col-span-full text-center">등록된 계약서가 없습니다.</span>
             </div>
@@ -538,7 +544,7 @@
       
       <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-5 space-y-2">
         <div class="flex justify-between items-center text-xs font-bold text-slate-600">
-          <span>총 공사금액</span>
+          <span>총 공사금액 (부가세포함)</span>
           <span id="prompt-disp-total" class="text-sm text-slate-800">0 원</span>
         </div>
         <div class="flex justify-between items-center text-xs font-bold text-slate-600">
@@ -673,7 +679,6 @@
       <div id="pdf-biz-wrap" class="flex-grow flex items-center justify-center overflow-hidden"></div>
     </div>
     
-    <!-- 💡 계약서 다중 페이지 동적 삽입 영역 -->
     <div id="pdf-contract-container"></div>
   </div>
 
@@ -802,65 +807,35 @@
       input.value = '';
     }
 
-    // 💡 계약서 다중 업로드 함수
     async function uploadMultiDocuments(input, listKey) {
       if (!input.files || input.files.length === 0) return;
       const proj = appData.projects.find(p => p.id === activeDetailProjectId); if (!proj) return;
       if (!proj[listKey]) proj[listKey] = [];
-
       const previewEl = document.getElementById(listKey + '-preview');
       previewEl.innerHTML = `<div class="col-span-full flex flex-col items-center justify-center text-skybrand-600 py-4"><i data-lucide="loader-2" class="w-6 h-6 animate-spin mb-1"></i><span class="text-xs font-bold">업로드 및 변환 중...</span></div>`;
       lucide.createIcons();
-
       for (const file of Array.from(input.files)) {
         try {
           let imageFile = file;
-          if (file.type === "application/pdf" || file.name.toLowerCase().endsWith('.pdf')) { 
-            imageFile = await convertPdfToImage(file); 
-          }
+          if (file.type === "application/pdf" || file.name.toLowerCase().endsWith('.pdf')) { imageFile = await convertPdfToImage(file); }
           const url = await uploadImageToDrive(imageFile);
           proj[listKey].push(url);
         } catch(e) {}
       }
-      renderDocumentPreviews();
-      triggerAutoSync(); 
-      input.value = '';
+      renderDocumentPreviews(); triggerAutoSync(); input.value = '';
     }
 
-    // 💡 다중 문서 삭제 함수
-    function removeMultiDoc(idx) {
-      if(confirm('이 계약서 사본을 삭제하시겠습니까?')) {
-        const proj = appData.projects.find(p => p.id === activeDetailProjectId);
-        if (proj && proj.contractDocsList) {
-          proj.contractDocsList.splice(idx, 1);
-          renderDocumentPreviews();
-          triggerAutoSync(); 
-        }
-      }
-    }
-
-    // 💡 미리보기 렌더링에 다중 계약서 포함
     function renderDocumentPreviews() {
       const proj = appData.projects.find(p => p.id === activeDetailProjectId); if (!proj) return;
-      
       const bizPreview = document.getElementById('bizLicense-preview');
       if (proj.bizLicense) { 
         bizPreview.innerHTML = `<img src="${proj.bizLicense}" class="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity" onclick="window.open('${proj.bizLicense}', '_blank')"><button type="button" onclick="clearDocument('bizLicense')" class="absolute top-1 right-1 bg-rose-600 text-white rounded-full p-1.5 shadow-md hover:bg-rose-700 transition-colors"><i data-lucide="x" class="w-3 h-3"></i></button>`; 
-      } else { 
-        bizPreview.innerHTML = `없음`; 
-      }
-
+      } else { bizPreview.innerHTML = `없음`; }
+      
       const contractContainer = document.getElementById('contractDocsList-preview');
       contractContainer.innerHTML = '';
       const list = proj.contractDocsList || [];
-      
-      // 구버전 단일 파일이 있으면 리스트로 자동 마이그레이션
-      if (list.length === 0 && proj.contractDoc) {
-         list.push(proj.contractDoc);
-         proj.contractDocsList = list;
-         proj.contractDoc = ""; 
-      }
-
+      if (list.length === 0 && proj.contractDoc) { list.push(proj.contractDoc); proj.contractDocsList = list; proj.contractDoc = ""; }
       if (list.length === 0) {
         contractContainer.innerHTML = `<span class="text-xs text-slate-400 col-span-full text-center">등록된 계약서가 없습니다.</span>`;
       } else {
@@ -870,8 +845,7 @@
               <img src="${src}" class="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity" onclick="window.open('${src}', '_blank')">
               <button type="button" onclick="removeMultiDoc(${idx})" class="absolute top-1 right-1 bg-rose-600 text-white rounded-full p-1 shadow-md hover:bg-rose-700 transition-colors opacity-0 group-hover:opacity-100"><i data-lucide="x" class="w-3 h-3"></i></button>
               <span class="absolute bottom-1 left-1 bg-black/60 text-white text-[10px] px-1.5 rounded">${idx+1}</span>
-            </div>
-          `;
+            </div>`;
         });
       }
       lucide.createIcons();
@@ -881,6 +855,12 @@
       if(confirm('이 첨부 서류를 삭제하시겠습니까?')) {
         const proj = appData.projects.find(p => p.id === activeDetailProjectId);
         if (proj) { proj[docType] = ""; renderDocumentPreviews(); }
+      }
+    }
+    function removeMultiDoc(idx) {
+      if(confirm('이 계약서 사본을 삭제하시겠습니까?')) {
+        const proj = appData.projects.find(p => p.id === activeDetailProjectId);
+        if (proj && proj.contractDocsList) { proj.contractDocsList.splice(idx, 1); renderDocumentPreviews(); triggerAutoSync(); }
       }
     }
 
@@ -1069,8 +1049,7 @@
     }
     
     function openNewProjectModal() { 
-      document.getElementById('project-modal').classList.remove('hidden'); 
-      document.getElementById('new-proj-date').valueAsDate = new Date();
+      document.getElementById('project-modal').classList.remove('hidden'); document.getElementById('new-proj-date').valueAsDate = new Date();
       document.getElementById('new-proj-year').value = new Date().getFullYear();
       ['new-proj-title','new-proj-addr','new-proj-client','new-proj-client-bizno','new-proj-client-phone','new-proj-client-email','new-proj-owner','new-proj-phone','new-proj-owner-email'].forEach(id => { if(document.getElementById(id)) document.getElementById(id).value = ''; });
       document.getElementById('new-proj-supply').value = '3000000'; calcNewProjTotal(); 
@@ -1080,24 +1059,13 @@
     function saveNewProject(e) {
       e.preventDefault();
       const newProj = {
-        id: String(Date.now()), 
-        year: document.getElementById('new-proj-year').value, 
-        isCompleted: false, 
-        title: document.getElementById('new-proj-title').value.trim(), 
-        addr: document.getElementById('new-proj-addr').value.trim(),
-        client: document.getElementById('new-proj-client').value.trim(), 
-        clientBizNo: document.getElementById('new-proj-client-bizno').value.trim(), 
-        clientPhone: document.getElementById('new-proj-client-phone').value.trim(), 
-        clientEmail: document.getElementById('new-proj-client-email').value.trim(),
-        owner: document.getElementById('new-proj-owner').value.trim(), 
-        phone: document.getElementById('new-proj-phone').value.trim(), 
-        ownerEmail: document.getElementById('new-proj-owner-email').value.trim(),
-        category: document.getElementById('new-proj-category').value, 
-        date: document.getElementById('new-proj-date').value || new Date().toISOString().slice(0, 10),
-        totalAmount: Number(document.getElementById('new-proj-total').value || 0), 
-        extraAmount: 0, depositAmount: 0, 
-        extraAmountsList: [], depositAmountsList: [], contractDocsList: [],
-        extraItems: [], bizLicense: "", contractDoc: ""
+        id: String(Date.now()), year: document.getElementById('new-proj-year').value, isCompleted: false, 
+        title: document.getElementById('new-proj-title').value.trim(), addr: document.getElementById('new-proj-addr').value.trim(),
+        client: document.getElementById('new-proj-client').value.trim(), clientBizNo: document.getElementById('new-proj-client-bizno').value.trim(), clientPhone: document.getElementById('new-proj-client-phone').value.trim(), clientEmail: document.getElementById('new-proj-client-email').value.trim(),
+        owner: document.getElementById('new-proj-owner').value.trim(), phone: document.getElementById('new-proj-phone').value.trim(), ownerEmail: document.getElementById('new-proj-owner-email').value.trim(),
+        category: document.getElementById('new-proj-category').value, date: document.getElementById('new-proj-date').value || new Date().toISOString().slice(0, 10),
+        totalAmount: Number(document.getElementById('new-proj-total').value || 0), extraAmount: 0, depositAmount: 0, 
+        extraAmountsList: [], depositAmountsList: [], contractDocsList: [], extraItems: [], bizLicense: "", contractDoc: ""
       };
       appData.projects.unshift(newProj); closeNewProjectModal(); renderProjects(); triggerAutoSync(); 
     }
@@ -1141,54 +1109,43 @@
     function openProjectDetail(id) {
       const proj = appData.projects.find(p => p.id === String(id)); if(!proj) return; activeDetailProjectId = proj.id;
       
-      document.getElementById('det-title').value = proj.title || ''; 
-      document.getElementById('det-addr').value = proj.addr || '';
-      document.getElementById('det-year').value = proj.year || new Date().getFullYear(); 
-      
-      const isComp = proj.isCompleted || false;
-      document.getElementById('det-status-completed').checked = isComp;
-      document.getElementById('det-status-text').innerText = isComp ? '공사 완료' : '진행중';
+      const vatCheckbox = document.getElementById('det-vat-excluded');
+      if(vatCheckbox) vatCheckbox.checked = false;
 
-      document.getElementById('det-category').value = proj.category || '가정용'; 
-      document.getElementById('det-date').value = proj.date || '';
-      document.getElementById('det-client').value = proj.client || ''; 
-      document.getElementById('det-client-bizno').value = proj.clientBizNo || '';
-      document.getElementById('det-client-phone').value = proj.clientPhone || ''; 
-      document.getElementById('det-client-email').value = proj.clientEmail || '';
-      document.getElementById('det-owner').value = proj.owner || ''; 
-      document.getElementById('det-owner-phone').value = proj.phone || '';
-      document.getElementById('det-owner-email').value = proj.ownerEmail || '';
+      document.getElementById('det-title').value = proj.title || ''; document.getElementById('det-addr').value = proj.addr || '';
+      document.getElementById('det-year').value = proj.year || new Date().getFullYear(); 
+      const isComp = proj.isCompleted || false; document.getElementById('det-status-completed').checked = isComp; document.getElementById('det-status-text').innerText = isComp ? '공사 완료' : '진행중';
+      document.getElementById('det-category').value = proj.category || '가정용'; document.getElementById('det-date').value = proj.date || '';
+      document.getElementById('det-client').value = proj.client || ''; document.getElementById('det-client-bizno').value = proj.clientBizNo || '';
+      document.getElementById('det-client-phone').value = proj.clientPhone || ''; document.getElementById('det-client-email').value = proj.clientEmail || '';
+      document.getElementById('det-owner').value = proj.owner || ''; document.getElementById('det-owner-phone').value = proj.phone || ''; document.getElementById('det-owner-email').value = proj.ownerEmail || '';
       
       document.getElementById('settle-total').value = proj.totalAmount || 0; 
       
       tempExtraAmounts = proj.extraAmountsList ? JSON.parse(JSON.stringify(proj.extraAmountsList)) : [];
-      if (tempExtraAmounts.length === 0 && (proj.extraAmount || 0) > 0) {
-        tempExtraAmounts.push({ date: proj.date || new Date().toISOString().slice(0,10), memo: '기존 추가금액', amount: proj.extraAmount });
-      }
+      if (tempExtraAmounts.length === 0 && (proj.extraAmount || 0) > 0) { tempExtraAmounts.push({ date: proj.date || new Date().toISOString().slice(0,10), memo: '기존 추가금액', amount: proj.extraAmount }); }
       
       tempDepositAmounts = proj.depositAmountsList ? JSON.parse(JSON.stringify(proj.depositAmountsList)) : [];
-      if (tempDepositAmounts.length === 0 && (proj.depositAmount || 0) > 0) {
-        tempDepositAmounts.push({ date: new Date().toISOString().slice(0,10), memo: '기존 입금액', amount: proj.depositAmount });
-      }
+      if (tempDepositAmounts.length === 0 && (proj.depositAmount || 0) > 0) { tempDepositAmounts.push({ date: new Date().toISOString().slice(0,10), memo: '기존 입금액', amount: proj.depositAmount }); }
 
-      renderExtraAmountRows();
-      renderDepositAmountRows();
-      
-      updateSettlementDisplayOnly(); renderDocumentPreviews(); 
+      renderExtraAmountRows(); renderDepositAmountRows(); updateSettlementDisplayOnly(); renderDocumentPreviews(); 
       document.getElementById('project-detail-modal').classList.remove('hidden');
     }
     
     function closeProjectDetailModal() { document.getElementById('project-detail-modal').classList.add('hidden'); }
     
     function updateSettlementDisplayOnly() {
-      const tot = Number(document.getElementById('settle-total').value || 0); 
+      const isExcluded = document.getElementById('det-vat-excluded') ? document.getElementById('det-vat-excluded').checked : false;
+      const mul = isExcluded ? 1.1 : 1;
+
+      const tot = Math.floor(Number(document.getElementById('settle-total').value || 0) * mul); 
       
       let ext = 0;
-      tempExtraAmounts.forEach(i => ext += (Number(i.amount) || 0));
+      tempExtraAmounts.forEach(i => ext += Math.floor((Number(i.amount) || 0) * mul));
       if(document.getElementById('extra-sum-display')) document.getElementById('extra-sum-display').innerText = ext.toLocaleString() + ' 원';
 
       let dep = 0;
-      tempDepositAmounts.forEach(i => dep += (Number(i.amount) || 0));
+      tempDepositAmounts.forEach(i => dep += Math.floor((Number(i.amount) || 0) * mul));
       if(document.getElementById('deposit-sum-display')) document.getElementById('deposit-sum-display').innerText = dep.toLocaleString() + ' 원';
 
       document.getElementById('settle-balance').innerText = ((tot + ext) - dep).toLocaleString() + ' 원';
@@ -1197,25 +1154,28 @@
     function saveProjectDetail(silent = false) {
       const p = appData.projects.find(p => p.id === activeDetailProjectId); if(!p) return;
       
-      p.title = document.getElementById('det-title').value.trim(); 
-      p.addr = document.getElementById('det-addr').value.trim(); 
-      p.year = document.getElementById('det-year').value; 
-      p.isCompleted = document.getElementById('det-status-completed').checked; 
-      
-      p.category = document.getElementById('det-category').value; 
-      p.date = document.getElementById('det-date').value;
-      p.client = document.getElementById('det-client').value.trim(); 
-      p.clientBizNo = document.getElementById('det-client-bizno').value.trim(); 
-      p.clientPhone = document.getElementById('det-client-phone').value.trim(); 
-      p.clientEmail = document.getElementById('det-client-email').value.trim();
-      p.owner = document.getElementById('det-owner').value.trim(); 
-      p.phone = document.getElementById('det-owner-phone').value.trim(); 
-      p.ownerEmail = document.getElementById('det-owner-email').value.trim();
+      // 💡 부가세 별도 체크되어있으면 입력된 값들에 1.1을 곱해 실제 입력창 및 변수에 업데이트 후 체크 해제
+      const isExcluded = document.getElementById('det-vat-excluded') ? document.getElementById('det-vat-excluded').checked : false;
+      if (isExcluded) {
+        document.getElementById('settle-total').value = Math.floor(Number(document.getElementById('settle-total').value || 0) * 1.1);
+        tempExtraAmounts.forEach(item => { if (item.amount) item.amount = Math.floor(Number(item.amount) * 1.1); });
+        tempDepositAmounts.forEach(item => { if (item.amount) item.amount = Math.floor(Number(item.amount) * 1.1); });
+        
+        document.getElementById('det-vat-excluded').checked = false;
+        renderExtraAmountRows();
+        renderDepositAmountRows();
+        updateSettlementDisplayOnly();
+      }
+
+      p.title = document.getElementById('det-title').value.trim(); p.addr = document.getElementById('det-addr').value.trim(); 
+      p.year = document.getElementById('det-year').value; p.isCompleted = document.getElementById('det-status-completed').checked; 
+      p.category = document.getElementById('det-category').value; p.date = document.getElementById('det-date').value;
+      p.client = document.getElementById('det-client').value.trim(); p.clientBizNo = document.getElementById('det-client-bizno').value.trim(); 
+      p.clientPhone = document.getElementById('det-client-phone').value.trim(); p.clientEmail = document.getElementById('det-client-email').value.trim();
+      p.owner = document.getElementById('det-owner').value.trim(); p.phone = document.getElementById('det-owner-phone').value.trim(); p.ownerEmail = document.getElementById('det-owner-email').value.trim();
       
       p.totalAmount = Number(document.getElementById('settle-total').value || 0); 
-      
-      p.extraAmountsList = [...tempExtraAmounts];
-      p.depositAmountsList = [...tempDepositAmounts];
+      p.extraAmountsList = [...tempExtraAmounts]; p.depositAmountsList = [...tempDepositAmounts];
       p.extraAmount = tempExtraAmounts.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
       p.depositAmount = tempDepositAmounts.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
       
@@ -1226,13 +1186,11 @@
     function renderProjects() {
       const tbody = document.getElementById('project-table-body'); if (!tbody) return; tbody.innerHTML = ''; 
       let totalBal = 0;
-      
       const searchKeyword = (document.getElementById('search-project')?.value || '').toLowerCase();
       const hideCompleted = document.getElementById('filter-hide-completed')?.checked || false;
 
       appData.projects.forEach(proj => {
         if (hideCompleted && proj.isCompleted) return;
-
         if (searchKeyword) {
           const titleMatch = (proj.title || '').toLowerCase().includes(searchKeyword);
           const clientMatch = (proj.client || '').toLowerCase().includes(searchKeyword);
@@ -1243,16 +1201,12 @@
         totalBal += bal;
 
         const yearStr = proj.year ? `[${proj.year}] ` : '';
-        const statusBadge = proj.isCompleted 
-            ? `<span class="px-2 py-1 bg-slate-200 text-slate-600 rounded-lg text-[10px] font-bold">완료</span>`
-            : `<span class="px-2 py-1 bg-skybrand-100 text-skybrand-700 rounded-lg text-[10px] font-bold">진행중</span>`;
+        const statusBadge = proj.isCompleted ? `<span class="px-2 py-1 bg-slate-200 text-slate-600 rounded-lg text-[10px] font-bold">완료</span>` : `<span class="px-2 py-1 bg-skybrand-100 text-skybrand-700 rounded-lg text-[10px] font-bold">진행중</span>`;
 
         tbody.innerHTML += `
           <tr class="hover:bg-slate-50 cursor-pointer border-b transition-colors" onclick="openProjectDetail('${proj.id}')">
-            <td class="p-3 font-bold text-skybrand-600 underline">${yearStr}${proj.title}</td>
-            <td class="p-3">${proj.client}</td>
-            <td class="p-3 font-black text-rose-600">${bal.toLocaleString()} 원</td>
-            <td class="p-3">${statusBadge}</td>
+            <td class="p-3 font-bold text-skybrand-600 underline">${yearStr}${proj.title}</td><td class="p-3">${proj.client}</td>
+            <td class="p-3 font-black text-rose-600">${bal.toLocaleString()} 원</td><td class="p-3">${statusBadge}</td>
             <td class="p-3 text-right"><button type="button" onclick="event.stopPropagation(); deleteProject('${proj.id}')" class="text-rose-500 font-bold hover:bg-rose-50 px-2 py-1 rounded transition-colors">삭제</button></td>
           </tr>`;
       });
@@ -1272,17 +1226,14 @@
       document.getElementById('prompt-disp-balance').innerText = bal.toLocaleString() + ' 원';
 
       const supply = Math.floor(totCost / 1.1);
-      document.getElementById('tax-prompt-supply').value = supply; 
-      document.getElementById('tax-prompt-vat').value = totCost - supply;
+      document.getElementById('tax-prompt-supply').value = supply; document.getElementById('tax-prompt-vat').value = totCost - supply;
       
       document.getElementById('tax-issue-prompt-modal').classList.remove('hidden');
     }
 
-    // 💡 세금계산서 PDF 출력 시 다중 계약서 페이지 생성 연동
     function confirmAndGenerateTaxInvoice() {
       const s = Number(document.getElementById('tax-prompt-supply').value||0), v = Number(document.getElementById('tax-prompt-vat').value||0);
       document.getElementById('tax-issue-prompt-modal').classList.add('hidden');
-      
       const proj = appData.projects.find(p => p.id === activeDetailProjectId);
       
       document.getElementById('pdf-title').innerText = proj.title || '-'; 
@@ -1305,35 +1256,23 @@
       if (proj.bizLicense) {
         document.getElementById('pdf-page-biz').style.display = 'flex';
         document.getElementById('pdf-biz-wrap').innerHTML = `<img src="${proj.bizLicense}" class="max-h-[80vh] object-contain">`;
-      } else {
-        document.getElementById('pdf-page-biz').style.display = 'none';
-      }
+      } else { document.getElementById('pdf-page-biz').style.display = 'none'; }
 
-      // 💡 동적으로 여러 장의 계약서 페이지 생성
       const contractContainer = document.getElementById('pdf-contract-container');
       contractContainer.innerHTML = '';
       const list = proj.contractDocsList || [];
-      if (list.length === 0 && proj.contractDoc) list.push(proj.contractDoc); // 구버전 호환
+      if (list.length === 0 && proj.contractDoc) list.push(proj.contractDoc); 
 
       list.forEach((docSrc, index) => {
-        const pageDiv = document.createElement('div');
-        pageDiv.className = "print-page";
-        pageDiv.innerHTML = `
-          <h2 class="text-xl font-black mb-4">[첨부] 계약서 및 계산서 사본 (${index + 1}/${list.length})</h2>
-          <div class="flex-grow flex items-center justify-center overflow-hidden">
-            <img src="${docSrc}" class="max-h-[80vh] object-contain">
-          </div>
-        `;
+        const pageDiv = document.createElement('div'); pageDiv.className = "print-page";
+        pageDiv.innerHTML = `<h2 class="text-xl font-black mb-4">[첨부] 계약서 및 계산서 사본 (${index + 1}/${list.length})</h2><div class="flex-grow flex items-center justify-center overflow-hidden"><img src="${docSrc}" class="max-h-[80vh] object-contain"></div>`;
         contractContainer.appendChild(pageDiv);
       });
       
       appData.taxInvoices.unshift({ id: Date.now(), title: proj.title, client: proj.client, grandTotal: s+v, date: new Date().toLocaleString() });
       renderTaxInvoiceList(); triggerAutoSync(); 
       
-      setTimeout(() => {
-        window.print(); 
-        document.getElementById('pdf-export-modal').classList.add('hidden'); 
-      }, 500); 
+      setTimeout(() => { window.print(); document.getElementById('pdf-export-modal').classList.add('hidden'); }, 500); 
     }
 
     function renderTaxInvoiceList() {
