@@ -153,7 +153,7 @@
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200"><span class="text-4xl font-black text-slate-200">01</span><h4 class="text-base font-bold text-slate-800 mt-2 mb-2">현장실측 및 견적</h4><p class="text-xs text-slate-500">배관 루트 실측 및 소비량 계산</p></div>
-          <div class="p-5 rounded-2xl bg-skybrand-50 border border-skybrand-200"><span class="text-4xl font-black text-skybrand-200">02</span><h4 class="text-base font-bold text-slate-800 mt-2 mb-2">계약 및 인허가 신청</h4><p class="text-xs text-skybrand-600">상세 견적 안내 및 시공 계약 체결</p></div>
+          <div class="p-5 rounded-2xl bg-skybrand-50 border border-skybrand-200"><span class="text-4xl font-black text-skybrand-200">02</span><h4 class="text-base font-bold text-skybrand-800 mt-2 mb-2">계약 및 인허가 신청</h4><p class="text-xs text-skybrand-600">상세 견적 안내 및 시공 계약 체결</p></div>
           <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200"><span class="text-4xl font-black text-slate-200">03</span><h4 class="text-base font-bold text-slate-800 mt-2 mb-2">내부 및 외부 시공</h4><p class="text-xs text-slate-500">실내외 강관 배관 및 매설배관 시공</p></div>
           <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200"><span class="text-4xl font-black text-slate-200">04</span><h4 class="text-base font-bold text-slate-800 mt-2 mb-2">기밀시험(압력테스트)</h4><p class="text-xs text-slate-500">KGS 규정 미세 누출 검증</p></div>
           <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200"><span class="text-4xl font-black text-slate-200">05</span><h4 class="text-base font-bold text-slate-800 mt-2 mb-2">완성검사 & 가스공급</h4><p class="text-xs text-slate-500">검사 합격 후 안전 개통</p></div>
@@ -170,6 +170,7 @@
         <div>
           <div class="flex flex-wrap items-center gap-2 mb-2">
             <span class="px-3 py-1 bg-skybrand-100 text-skybrand-700 text-xs font-bold rounded-lg border">광진유한회사 기술시공본부</span>
+            <!-- 구글 드라이브 클라우드 상태 뱃지 -->
             <span id="sync-drive-badge" class="px-3 py-0.5 rounded-full text-[11px] font-black bg-emerald-100 text-emerald-700 border border-emerald-400">
               📁 Google Drive 실시간 클라우드 연동
             </span>
@@ -266,7 +267,8 @@
   <div id="password-modal" class="fixed inset-0 z-50 bg-slate-900/60 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl p-6 max-w-sm w-full border shadow-2xl">
       <h3 class="text-lg font-black text-center mb-1">스마트 관제실 인증</h3>
-      <input type="password" id="manager-password-input" maxlength="10" placeholder="비밀번호 4자리" onkeydown="if(event.key==='Enter') verifyPassword()" class="w-full text-center tracking-widest text-xl font-black bg-slate-50 border rounded-2xl py-3 mb-2 focus:border-skybrand-500 outline-none">
+      <!-- 💡 요청하신 비밀번호 4자리 문구(placeholder) 삭제됨 -->
+      <input type="password" id="manager-password-input" maxlength="10" placeholder="" onkeydown="if(event.key==='Enter') verifyPassword()" class="w-full text-center tracking-widest text-xl font-black bg-slate-50 border rounded-2xl py-3 mb-2 focus:border-skybrand-500 outline-none">
       <p id="password-error" class="hidden text-xs text-rose-500 font-bold text-center mb-3">비밀번호가 틀렸습니다.</p>
       <div class="flex gap-2">
         <button onclick="closePasswordModal()" class="flex-1 py-2.5 bg-slate-100 rounded-xl font-bold">취소</button>
@@ -756,7 +758,6 @@
       }
     }
 
-    // 💡 1. 구글 드라이브 업로드 시 폴더명을 서버로 전송하도록 파라미터 추가
     async function uploadImageToDrive(fileOrBlob, folderName = "") {
       return new Promise((resolve) => {
         const reader = new FileReader();
@@ -783,7 +784,7 @@
                     fileName: `photo_${Date.now()}.jpg`, 
                     contentType: "image/jpeg", 
                     base64Data: base64Data,
-                    folderName: folderName // 💡 추가: 폴더명 전송
+                    folderName: folderName 
                   }) 
                 });
                 const resJson = await res.json();
@@ -803,7 +804,7 @@
                     fileName: fileOrBlob.name || `photo_${Date.now()}.jpg`, 
                     contentType: fileOrBlob.type || "application/octet-stream", 
                     base64Data: rawBase64,
-                    folderName: folderName // 💡 추가: 폴더명 전송
+                    folderName: folderName 
                   }) 
                 });
                 const resJson = await res.json();
@@ -838,7 +839,6 @@
       });
     }
 
-    // 💡 2. 단일 서류 업로드 시 현장명을 추출하여 폴더명으로 전달
     async function uploadDocument(input, docType) {
       if (!input.files || input.files.length === 0) return;
       const file = input.files[0];
@@ -847,12 +847,12 @@
       lucide.createIcons();
       
       const proj = appData.projects.find(p => p.id === activeDetailProjectId);
-      const targetFolder = proj && proj.title ? proj.title : "기타_서류"; // 💡 폴더명 설정
+      const targetFolder = proj && proj.title ? proj.title : "기타_서류"; 
 
       try {
         let imageFile = file;
         if (file.type === "application/pdf" || file.name.toLowerCase().endsWith('.pdf')) { imageFile = await convertPdfToImage(file); }
-        const url = await uploadImageToDrive(imageFile, targetFolder); // 💡 폴더명 전달
+        const url = await uploadImageToDrive(imageFile, targetFolder); 
         
         if (proj && url) { proj[docType] = url; renderDocumentPreviews(); triggerAutoSync(); }
         else { renderDocumentPreviews(); }
@@ -860,7 +860,6 @@
       input.value = '';
     }
 
-    // 💡 3. 다중 서류 업로드 시 현장명을 추출하여 폴더명으로 전달
     async function uploadMultiDocuments(input, listKey) {
       if (!input.files || input.files.length === 0) return;
       const proj = appData.projects.find(p => p.id === activeDetailProjectId); if (!proj) return;
@@ -869,7 +868,7 @@
       
       const total = input.files.length;
       let count = 0;
-      const targetFolder = proj && proj.title ? proj.title : "기타_서류"; // 💡 폴더명 설정
+      const targetFolder = proj.title ? proj.title : "기타_서류"; 
 
       previewEl.innerHTML = `<div class="col-span-full flex flex-col items-center justify-center text-skybrand-600 py-4"><i data-lucide="loader-2" class="w-6 h-6 animate-spin mb-1"></i><span id="multi-doc-progress" class="text-xs font-bold mt-2">서류 준비 중...</span></div>`;
       lucide.createIcons();
@@ -884,7 +883,7 @@
           if (file.type === "application/pdf" || file.name.toLowerCase().endsWith('.pdf')) { 
             imageFile = await convertPdfToImage(file); 
           }
-          const url = await uploadImageToDrive(imageFile, targetFolder); // 💡 폴더명 전달
+          const url = await uploadImageToDrive(imageFile, targetFolder); 
           if (url) { proj[listKey].push(url); }
         } catch(e) {}
       }
@@ -1080,7 +1079,6 @@
       document.getElementById('project-album-modal').classList.add('hidden'); 
     }
     
-    // 💡 4. 앨범 생성 시 입력된 공사명을 폴더명으로 전달
     async function handleAlbumFilesSelect(input) {
       if (!input.files || input.files.length === 0) return;
       const icon = document.getElementById('icon-album-file'); const text = document.getElementById('text-album-file');
@@ -1089,14 +1087,13 @@
       const total = input.files.length;
       let count = 0;
 
-      // 상단 입력칸에서 공사명을 가져와 폴더명으로 지정 (없으면 날짜로 생성)
       let targetFolder = document.getElementById('album-title').value.trim();
       if (!targetFolder) targetFolder = "새_앨범_" + new Date().toISOString().slice(0,10);
       
       for (const file of Array.from(input.files)) {
         count++;
         text.innerText = `사진 서버에 저장 중... (${count}/${total})`;
-        const url = await uploadImageToDrive(file, targetFolder); // 💡 폴더명 전달
+        const url = await uploadImageToDrive(file, targetFolder); 
         if (url) {
           currentAlbumPhotos.push(url);
           renderAlbumPreviewGrid(); 
@@ -1146,7 +1143,6 @@
       document.getElementById('edit-album-modal').classList.add('hidden'); 
     }
     
-    // 💡 5. 앨범 사진 추가/수정 시 기존 공사명을 폴더명으로 전달
     async function handleEditFilesSelect(input) {
       if (!input.files || input.files.length === 0) return;
       const icon = document.getElementById('icon-edit-file'); const text = document.getElementById('text-edit-file');
@@ -1156,12 +1152,12 @@
       let count = 0;
 
       const album = appData.projectAlbums.find(a => a.id === activeEditAlbumId);
-      const targetFolder = album && album.title ? album.title : "수정_앨범"; // 💡 폴더명 설정
+      const targetFolder = album && album.title ? album.title : "수정_앨범"; 
 
       for (const file of Array.from(input.files)) {
         count++;
         text.innerText = `사진 추가 중... (${count}/${total})`;
-        const url = await uploadImageToDrive(file, targetFolder); // 💡 폴더명 전달
+        const url = await uploadImageToDrive(file, targetFolder); 
         if (url) {
           editNewPhotos.push(url);
           renderEditAlbumGrid(); 
