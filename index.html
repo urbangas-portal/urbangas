@@ -189,6 +189,7 @@
         <button onclick="switchTab('project')" id="tab-btn-project" class="px-5 py-3 rounded-t-xl bg-white text-skybrand-600 border-t-2 border-skybrand-600 shadow-sm transition-all">현장 공정 관리 보드</button>
         <button onclick="switchTab('photos')" id="tab-btn-photos" class="px-5 py-3 rounded-t-xl bg-slate-200 text-slate-600 transition-all hover:bg-slate-300">공사별 시공사진 앨범 관리</button>
         <button onclick="switchTab('tax')" id="tab-btn-tax" class="px-5 py-3 rounded-t-xl bg-slate-200 text-slate-600 transition-all hover:bg-slate-300">세금계산서 발행 내역</button>
+        <button onclick="switchTab('schedule')" id="tab-btn-schedule" class="px-5 py-3 rounded-t-xl bg-slate-200 text-slate-600 transition-all hover:bg-slate-300 flex items-center gap-1.5"><i data-lucide="calendar-days" class="w-4 h-4"></i><span>공사일정</span></button>
       </div>
 
       <!-- 1. 현장 공정 관리 -->
@@ -246,6 +247,117 @@
             </thead>
             <tbody id="tax-table-body" class="divide-y divide-slate-100"></tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- 4. 공사 일정 관리 -->
+      <div id="tab-content-schedule" class="hidden bg-white rounded-2xl p-4 sm:p-6 border shadow-sm">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-5 pb-4 border-b">
+          <div>
+            <h3 class="text-lg font-black text-slate-900 flex items-center gap-2"><i data-lucide="calendar-days" class="w-5 h-5 text-skybrand-600"></i>공사 일정 관리</h3>
+            <p class="text-xs text-slate-500 mt-1">날짜를 클릭해 작업 내용을 입력하고 담당 이름을 한 명 이상 선택하면 달력에 각 이름의 지정 색상으로 표시됩니다.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="moveScheduleMonth(-1)" class="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center"><i data-lucide="chevron-left" class="w-5 h-5"></i></button>
+            <button type="button" onclick="goScheduleToday()" class="px-3 h-10 rounded-xl bg-skybrand-50 text-skybrand-700 border border-skybrand-200 font-bold text-xs hover:bg-skybrand-100">오늘</button>
+            <div id="schedule-month-label" class="min-w-[140px] text-center text-lg sm:text-xl font-black text-slate-800"></div>
+            <button type="button" onclick="moveScheduleMonth(1)" class="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center"><i data-lucide="chevron-right" class="w-5 h-5"></i></button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <div class="min-w-[760px]">
+            <div class="grid grid-cols-7 border-l border-t border-slate-200 rounded-t-xl overflow-hidden bg-slate-50">
+              <div class="py-2.5 text-center text-xs font-black text-rose-500 border-r border-b">일</div>
+              <div class="py-2.5 text-center text-xs font-black text-slate-600 border-r border-b">월</div>
+              <div class="py-2.5 text-center text-xs font-black text-slate-600 border-r border-b">화</div>
+              <div class="py-2.5 text-center text-xs font-black text-slate-600 border-r border-b">수</div>
+              <div class="py-2.5 text-center text-xs font-black text-slate-600 border-r border-b">목</div>
+              <div class="py-2.5 text-center text-xs font-black text-slate-600 border-r border-b">금</div>
+              <div class="py-2.5 text-center text-xs font-black text-blue-500 border-r border-b">토</div>
+            </div>
+            <div id="schedule-calendar-grid" class="grid grid-cols-7 border-l border-slate-200"></div>
+          </div>
+        </div>
+
+        <div class="mt-6 p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200">
+          <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+            <div>
+              <h4 class="font-black text-sm text-slate-800">이름 및 색상 관리</h4>
+              <p class="text-[11px] text-slate-500 mt-1">공사 일정에 사용할 담당자·팀·공종 이름과 표시 색상을 자유롭게 추가할 수 있습니다.</p>
+            </div>
+            <div class="w-full lg:max-w-3xl space-y-3">
+              <input type="text" id="schedule-member-name" maxlength="30" placeholder="이름 입력 (예: 강희성, 배관팀)" onkeydown="if(event.key==='Enter'){event.preventDefault(); addScheduleMember();}" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:border-skybrand-500">
+              <div class="bg-white border border-slate-200 rounded-xl p-3">
+                <div class="flex flex-col xl:flex-row xl:items-center gap-3">
+                  <div class="flex-grow">
+                    <div class="text-[11px] font-black text-slate-600 mb-2">기본색 선택</div>
+                    <div id="schedule-preset-colors" class="flex flex-wrap gap-2">
+                      <button type="button" onclick="selectSchedulePresetColor('#DC2626', this)" class="schedule-color-preset w-8 h-8 rounded-lg border-2 border-white ring-1 ring-slate-300 shadow-sm" style="background:#DC2626" title="빨강"></button>
+                      <button type="button" onclick="selectSchedulePresetColor('#EA580C', this)" class="schedule-color-preset w-8 h-8 rounded-lg border-2 border-white ring-1 ring-slate-300 shadow-sm" style="background:#EA580C" title="주황"></button>
+                      <button type="button" onclick="selectSchedulePresetColor('#D97706', this)" class="schedule-color-preset w-8 h-8 rounded-lg border-2 border-white ring-1 ring-slate-300 shadow-sm" style="background:#D97706" title="황금"></button>
+                      <button type="button" onclick="selectSchedulePresetColor('#65A30D', this)" class="schedule-color-preset w-8 h-8 rounded-lg border-2 border-white ring-1 ring-slate-300 shadow-sm" style="background:#65A30D" title="연두"></button>
+                      <button type="button" onclick="selectSchedulePresetColor('#16A34A', this)" class="schedule-color-preset w-8 h-8 rounded-lg border-2 border-white ring-1 ring-slate-300 shadow-sm" style="background:#16A34A" title="초록"></button>
+                      <button type="button" onclick="selectSchedulePresetColor('#0D9488', this)" class="schedule-color-preset w-8 h-8 rounded-lg border-2 border-white ring-1 ring-slate-300 shadow-sm" style="background:#0D9488" title="청록"></button>
+                      <button type="button" onclick="selectSchedulePresetColor('#0891B2', this)" class="schedule-color-preset w-8 h-8 rounded-lg border-2 border-white ring-1 ring-slate-300 shadow-sm" style="background:#0891B2" title="하늘"></button>
+                      <button type="button" onclick="selectSchedulePresetColor('#0284C7', this)" class="schedule-color-preset w-8 h-8 rounded-lg border-2 border-white ring-2 ring-slate-800 shadow-sm" style="background:#0284C7" title="파랑"></button>
+                      <button type="button" onclick="selectSchedulePresetColor('#2563EB', this)" class="schedule-color-preset w-8 h-8 rounded-lg border-2 border-white ring-1 ring-slate-300 shadow-sm" style="background:#2563EB" title="진파랑"></button>
+                      <button type="button" onclick="selectSchedulePresetColor('#4F46E5', this)" class="schedule-color-preset w-8 h-8 rounded-lg border-2 border-white ring-1 ring-slate-300 shadow-sm" style="background:#4F46E5" title="남색"></button>
+                      <button type="button" onclick="selectSchedulePresetColor('#7C3AED', this)" class="schedule-color-preset w-8 h-8 rounded-lg border-2 border-white ring-1 ring-slate-300 shadow-sm" style="background:#7C3AED" title="보라"></button>
+                      <button type="button" onclick="selectSchedulePresetColor('#DB2777', this)" class="schedule-color-preset w-8 h-8 rounded-lg border-2 border-white ring-1 ring-slate-300 shadow-sm" style="background:#DB2777" title="분홍"></button>
+                      <button type="button" onclick="selectSchedulePresetColor('#475569', this)" class="schedule-color-preset w-8 h-8 rounded-lg border-2 border-white ring-1 ring-slate-300 shadow-sm" style="background:#475569" title="회색"></button>
+                    </div>
+                  </div>
+                  <div class="xl:border-l xl:pl-4 shrink-0">
+                    <div class="text-[11px] font-black text-slate-600 mb-2">RGB 직접 선택</div>
+                    <div class="flex items-center gap-1.5">
+                      <label class="flex items-center gap-1 text-[10px] font-bold text-rose-600">R<input type="number" id="schedule-r" min="0" max="255" value="2" oninput="updateScheduleColorFromRGB()" class="w-14 border border-slate-300 rounded-lg px-2 py-1.5 text-xs text-center text-slate-700"></label>
+                      <label class="flex items-center gap-1 text-[10px] font-bold text-emerald-600">G<input type="number" id="schedule-g" min="0" max="255" value="132" oninput="updateScheduleColorFromRGB()" class="w-14 border border-slate-300 rounded-lg px-2 py-1.5 text-xs text-center text-slate-700"></label>
+                      <label class="flex items-center gap-1 text-[10px] font-bold text-blue-600">B<input type="number" id="schedule-b" min="0" max="255" value="199" oninput="updateScheduleColorFromRGB()" class="w-14 border border-slate-300 rounded-lg px-2 py-1.5 text-xs text-center text-slate-700"></label>
+                      <span id="schedule-color-preview" class="w-9 h-9 rounded-lg border-2 border-white ring-1 ring-slate-300 shadow-sm ml-1" style="background:#0284C7" title="현재 선택 색상"></span>
+                    </div>
+                  </div>
+                </div>
+                <input type="hidden" id="schedule-member-color" value="#0284C7">
+              </div>
+              <div class="flex justify-end">
+                <button type="button" onclick="addScheduleMember()" class="px-5 py-2.5 bg-skybrand-600 hover:bg-skybrand-700 text-white rounded-xl font-bold text-xs whitespace-nowrap flex items-center gap-1.5"><i data-lucide="plus" class="w-4 h-4"></i>이름 추가</button>
+              </div>
+            </div>
+          </div>
+          <div id="schedule-member-list" class="mt-4 flex flex-wrap gap-2"></div>
+        </div>
+
+        <!-- 인원별 월간 일정 검색 -->
+        <div class="mt-6 rounded-2xl border border-slate-200 bg-white overflow-hidden">
+          <div class="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h4 class="font-black text-sm text-slate-800 flex items-center gap-2"><i data-lucide="search" class="w-4 h-4 text-skybrand-600"></i>인원별 월간 일정 검색</h4>
+              <p class="text-[11px] text-slate-500 mt-1">현재 달력에 표시된 달을 기준으로, 선택한 이름별 일정이 입력된 날짜 수를 확인합니다.</p>
+            </div>
+            <button type="button" onclick="toggleScheduleSearchPanel()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shrink-0">
+              <i data-lucide="users" class="w-4 h-4"></i><span>일정 검색</span>
+            </button>
+          </div>
+
+          <div id="schedule-search-panel" class="hidden border-t border-slate-200 bg-slate-50 p-4 sm:p-5">
+            <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-3 mb-3">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-black text-slate-700">이름 선택</span>
+                  <span id="schedule-search-month-label" class="px-2 py-1 rounded-lg bg-skybrand-100 text-skybrand-700 text-[11px] font-black"></span>
+                </div>
+                <p class="text-[11px] text-slate-500 mt-1">여러 명을 동시에 선택할 수 있습니다.</p>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <button type="button" onclick="toggleAllScheduleSearchMembers(true)" class="px-3 py-2 bg-white border border-slate-300 rounded-lg text-[11px] font-bold text-slate-600 hover:bg-slate-100">전체 선택</button>
+                <button type="button" onclick="toggleAllScheduleSearchMembers(false)" class="px-3 py-2 bg-white border border-slate-300 rounded-lg text-[11px] font-bold text-slate-600 hover:bg-slate-100">선택 해제</button>
+                <button type="button" onclick="searchScheduleByMembers()" class="px-4 py-2 bg-skybrand-600 hover:bg-skybrand-700 text-white rounded-lg text-[11px] font-black flex items-center gap-1.5"><i data-lucide="search" class="w-3.5 h-3.5"></i>검색</button>
+              </div>
+            </div>
+            <div id="schedule-search-member-list" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2"></div>
+            <div id="schedule-search-result" class="hidden mt-4"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -581,6 +693,50 @@
     </div>
   </div>
 
+  <!-- [7-1] 공사 일정 등록/관리 -->
+  <div id="schedule-day-modal" class="fixed inset-0 z-[65] bg-slate-900/70 hidden flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-white rounded-3xl max-w-xl w-full border shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
+      <div class="p-5 border-b bg-slate-50 flex items-center justify-between shrink-0">
+        <div>
+          <p class="text-[11px] font-bold text-skybrand-600 mb-1">공사 일정</p>
+          <h3 id="schedule-modal-date-title" class="text-lg font-black text-slate-900">날짜</h3>
+        </div>
+        <button type="button" onclick="closeScheduleDayModal()" class="w-9 h-9 rounded-full hover:bg-slate-200 flex items-center justify-center"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <div class="p-5 overflow-y-auto space-y-5">
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <h4 class="text-xs font-black text-slate-700">등록된 일정</h4>
+            <span id="schedule-modal-count" class="text-[11px] text-slate-400"></span>
+          </div>
+          <div id="schedule-day-existing-list" class="space-y-2"></div>
+        </div>
+
+        <div class="border-t pt-4 space-y-3">
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="block text-xs font-bold text-slate-700">이름 선택 <span class="text-skybrand-600">(여러 명 선택 가능)</span></label>
+              <div class="flex items-center gap-2">
+                <button type="button" onclick="toggleAllScheduleMembers(true)" class="text-[11px] font-bold text-skybrand-600 hover:text-skybrand-800">전체 선택</button>
+                <button type="button" onclick="toggleAllScheduleMembers(false)" class="text-[11px] font-bold text-slate-500 hover:text-slate-700">선택 해제</button>
+              </div>
+            </div>
+            <div id="schedule-event-member-list" class="grid grid-cols-2 sm:grid-cols-3 gap-2 bg-slate-50 border border-slate-300 rounded-xl p-3 max-h-44 overflow-y-auto"></div>
+            <p id="schedule-no-member-guide" class="hidden mt-2 text-[11px] font-bold text-rose-500">먼저 달력 하단의 ‘이름 및 색상 관리’에서 이름을 추가해주세요.</p>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1.5">일정 내용</label>
+            <textarea id="schedule-event-content" rows="4" maxlength="500" placeholder="예: 오전 9시 현장 실측 / 가스배관 신설 작업 / 고객 연락사항" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-sm outline-none focus:border-skybrand-500 resize-y"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="p-4 border-t bg-white flex gap-2 shrink-0">
+        <button type="button" onclick="closeScheduleDayModal()" class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 rounded-xl font-bold text-sm">닫기</button>
+        <button type="button" id="schedule-save-btn" onclick="saveScheduleEvent()" class="flex-1 py-3 bg-skybrand-600 hover:bg-skybrand-700 text-white rounded-xl font-bold text-sm shadow-sm">일정 저장</button>
+      </div>
+    </div>
+  </div>
+
   <!-- [8] 갤러리 이미지 확대보기 -->
   <div id="lightbox-modal" class="fixed inset-0 z-[70] bg-slate-950/90 hidden flex items-center justify-center p-4">
     <div class="max-w-4xl w-full bg-slate-900 rounded-3xl overflow-hidden shadow-2xl flex flex-col relative text-white">
@@ -726,7 +882,9 @@
     let appData = {
       projects: JSON.parse(localStorage.getItem('gwangjin_projects')) || [],
       projectAlbums: JSON.parse(localStorage.getItem('gwangjin_project_albums')) || [{ id: "1", title: "옥련동 단독주택 보일러 배관 신설", category: "가정용", date: "2026-09-12", photos: [] }],
-      taxInvoices: JSON.parse(localStorage.getItem('gwangjin_tax_invoices')) || []
+      taxInvoices: JSON.parse(localStorage.getItem('gwangjin_tax_invoices')) || [],
+      scheduleMembers: JSON.parse(localStorage.getItem('gwangjin_schedule_members')) || [],
+      scheduleEvents: JSON.parse(localStorage.getItem('gwangjin_schedule_events')) || []
     };
 
     let tempExtraAmounts = [];
@@ -738,12 +896,22 @@
         const response = await fetch(GOOGLE_SCRIPT_URL);
         const data = await response.json();
         if (data && data.projects) {
-          appData = data;
+          const localScheduleMembers = appData.scheduleMembers || [];
+          const localScheduleEvents = appData.scheduleEvents || [];
+          appData = {
+            ...data,
+            projectAlbums: data.projectAlbums || [],
+            taxInvoices: data.taxInvoices || [],
+            scheduleMembers: Array.isArray(data.scheduleMembers) ? data.scheduleMembers : localScheduleMembers,
+            scheduleEvents: Array.isArray(data.scheduleEvents) ? data.scheduleEvents : localScheduleEvents
+          };
           localStorage.setItem('gwangjin_projects', JSON.stringify(appData.projects));
           localStorage.setItem('gwangjin_project_albums', JSON.stringify(appData.projectAlbums));
           localStorage.setItem('gwangjin_tax_invoices', JSON.stringify(appData.taxInvoices));
+          localStorage.setItem('gwangjin_schedule_members', JSON.stringify(appData.scheduleMembers));
+          localStorage.setItem('gwangjin_schedule_events', JSON.stringify(appData.scheduleEvents));
           filterGallery(currentFilter);
-          renderProjects(); renderManagerAlbumList(); renderTaxInvoiceList();
+          renderProjects(); renderManagerAlbumList(); renderTaxInvoiceList(); renderScheduleCalendar(); renderScheduleMembers();
           if (showAlert) alert("구글 드라이브와 동기화 완료!");
         }
       } catch (err) {}
@@ -753,6 +921,8 @@
       localStorage.setItem('gwangjin_projects', JSON.stringify(appData.projects));
       localStorage.setItem('gwangjin_project_albums', JSON.stringify(appData.projectAlbums));
       localStorage.setItem('gwangjin_tax_invoices', JSON.stringify(appData.taxInvoices));
+      localStorage.setItem('gwangjin_schedule_members', JSON.stringify(appData.scheduleMembers || []));
+      localStorage.setItem('gwangjin_schedule_events', JSON.stringify(appData.scheduleEvents || []));
       if (GOOGLE_SCRIPT_URL && !GOOGLE_SCRIPT_URL.includes("여기에")) {
         try { fetch(GOOGLE_SCRIPT_URL, { method: "POST", body: JSON.stringify({ action: "syncData", payload: appData }) }); } catch (err) {}
       }
@@ -958,7 +1128,7 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-      lucide.createIcons(); filterGallery('전체'); renderProjects(); renderTaxInvoiceList(); fetchDriveData(false); 
+      lucide.createIcons(); filterGallery('전체'); renderProjects(); renderTaxInvoiceList(); renderScheduleCalendar(); renderScheduleMembers(); fetchDriveData(false); 
     });
 
     function openPasswordModal() { document.getElementById('password-modal').classList.remove('hidden'); document.getElementById('password-error').classList.add('hidden'); }
@@ -966,7 +1136,7 @@
     function verifyPassword() {
       if (document.getElementById('manager-password-input').value === SECRET_PIN) {
         closePasswordModal(); document.getElementById('view-public').classList.add('hidden'); document.getElementById('view-manager').classList.remove('hidden');
-        fetchDriveData(false); renderManagerAlbumList(); renderProjects(); renderTaxInvoiceList(); window.scrollTo({ top: 0, behavior: 'smooth' });
+        fetchDriveData(false); renderManagerAlbumList(); renderProjects(); renderTaxInvoiceList(); renderScheduleCalendar(); renderScheduleMembers(); window.scrollTo({ top: 0, behavior: 'smooth' });
       } else { document.getElementById('password-error').classList.remove('hidden'); }
     }
     function logoutManagerMode() {
@@ -1491,11 +1661,379 @@
     }
 
     function switchTab(t) {
-      ['project', 'photos', 'tax'].forEach(tab => {
+      ['project', 'photos', 'tax', 'schedule'].forEach(tab => {
         document.getElementById(`tab-content-${tab}`).classList.toggle('hidden', tab !== t);
-        document.getElementById(`tab-btn-${tab}`).className = t === tab ? "px-5 py-3 rounded-t-xl bg-white text-skybrand-600 border-t-2 border-skybrand-600 shadow-sm transition-all" : "px-5 py-3 rounded-t-xl bg-slate-200 text-slate-600 hover:bg-slate-300 transition-all";
+        document.getElementById(`tab-btn-${tab}`).className = t === tab ? "px-5 py-3 rounded-t-xl bg-white text-skybrand-600 border-t-2 border-skybrand-600 shadow-sm transition-all flex items-center gap-1.5" : "px-5 py-3 rounded-t-xl bg-slate-200 text-slate-600 hover:bg-slate-300 transition-all flex items-center gap-1.5";
       });
-      if(t==='photos') renderManagerAlbumList(); if(t==='project') renderProjects(); if(t==='tax') renderTaxInvoiceList();
+      if(t==='photos') renderManagerAlbumList();
+      if(t==='project') renderProjects();
+      if(t==='tax') renderTaxInvoiceList();
+      if(t==='schedule') { renderScheduleCalendar(); renderScheduleMembers(); renderScheduleSearchMembers(); updateScheduleSearchMonthLabel(); }
+      lucide.createIcons();
+    }
+
+    // ===============================
+    // 공사 일정 달력 관리
+    // ===============================
+    let scheduleCalendarDate = new Date();
+    scheduleCalendarDate = new Date(scheduleCalendarDate.getFullYear(), scheduleCalendarDate.getMonth(), 1);
+    let selectedScheduleDate = '';
+    let scheduleSearchHasRun = false;
+
+    function schedulePad(n) { return String(n).padStart(2, '0'); }
+    function formatScheduleDate(year, monthIndex, day) { return `${year}-${schedulePad(monthIndex + 1)}-${schedulePad(day)}`; }
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
+    }
+    function safeScheduleColor(color) { return /^#[0-9a-fA-F]{6}$/.test(color || '') ? color.toUpperCase() : '#64748B'; }
+    function clampScheduleRgb(value) {
+      const n = parseInt(value, 10);
+      return Number.isFinite(n) ? Math.max(0, Math.min(255, n)) : 0;
+    }
+    function scheduleRgbToHex(r, g, b) {
+      return '#' + [r, g, b].map(v => clampScheduleRgb(v).toString(16).padStart(2, '0')).join('').toUpperCase();
+    }
+    function scheduleHexToRgb(hex) {
+      const safe = safeScheduleColor(hex).slice(1);
+      return { r: parseInt(safe.slice(0,2),16), g: parseInt(safe.slice(2,4),16), b: parseInt(safe.slice(4,6),16) };
+    }
+    function setScheduleMemberColor(color, activeButton=null) {
+      const hex = safeScheduleColor(color);
+      const hidden = document.getElementById('schedule-member-color');
+      const preview = document.getElementById('schedule-color-preview');
+      const rgb = scheduleHexToRgb(hex);
+      if (hidden) hidden.value = hex;
+      if (preview) preview.style.background = hex;
+      const r = document.getElementById('schedule-r'), g = document.getElementById('schedule-g'), b = document.getElementById('schedule-b');
+      if (r) r.value = rgb.r;
+      if (g) g.value = rgb.g;
+      if (b) b.value = rgb.b;
+      document.querySelectorAll('.schedule-color-preset').forEach(btn => {
+        btn.classList.remove('ring-2', 'ring-slate-800');
+        btn.classList.add('ring-1', 'ring-slate-300');
+      });
+      if (activeButton) {
+        activeButton.classList.remove('ring-1', 'ring-slate-300');
+        activeButton.classList.add('ring-2', 'ring-slate-800');
+      }
+    }
+    function selectSchedulePresetColor(color, button) { setScheduleMemberColor(color, button); }
+    function updateScheduleColorFromRGB() {
+      const r = clampScheduleRgb(document.getElementById('schedule-r')?.value);
+      const g = clampScheduleRgb(document.getElementById('schedule-g')?.value);
+      const b = clampScheduleRgb(document.getElementById('schedule-b')?.value);
+      const rEl = document.getElementById('schedule-r'), gEl = document.getElementById('schedule-g'), bEl = document.getElementById('schedule-b');
+      if (rEl) rEl.value = r;
+      if (gEl) gEl.value = g;
+      if (bEl) bEl.value = b;
+      setScheduleMemberColor(scheduleRgbToHex(r, g, b));
+    }
+    function getScheduleEventMembers(event) {
+      const master = appData.scheduleMembers || [];
+      let snapshots = [];
+      if (Array.isArray(event.members) && event.members.length) {
+        snapshots = event.members;
+      } else if (Array.isArray(event.memberIds) && event.memberIds.length) {
+        snapshots = event.memberIds.map(id => ({ id: String(id), name: '', color: '#64748B' }));
+      } else if (event.memberId || event.memberName) {
+        snapshots = [{ id: String(event.memberId || ''), name: event.memberName || '', color: event.color || '#64748B' }];
+      }
+      return snapshots.map(snapshot => {
+        const live = master.find(m => String(m.id) === String(snapshot.id));
+        return {
+          id: String(snapshot.id || live?.id || ''),
+          name: live?.name || snapshot.name || '미지정',
+          color: safeScheduleColor(live?.color || snapshot.color || '#64748B')
+        };
+      });
+    }
+    function scheduleEventHasMember(event, memberId) {
+      return getScheduleEventMembers(event).some(m => String(m.id) === String(memberId));
+    }
+
+    function moveScheduleMonth(delta) {
+      scheduleCalendarDate = new Date(scheduleCalendarDate.getFullYear(), scheduleCalendarDate.getMonth() + delta, 1);
+      renderScheduleCalendar();
+      updateScheduleSearchMonthLabel();
+      if (scheduleSearchHasRun) renderScheduleSearchResults();
+    }
+
+    function goScheduleToday() {
+      const now = new Date();
+      scheduleCalendarDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      renderScheduleCalendar();
+      updateScheduleSearchMonthLabel();
+      if (scheduleSearchHasRun) renderScheduleSearchResults();
+    }
+
+    function renderScheduleCalendar() {
+      const grid = document.getElementById('schedule-calendar-grid');
+      const label = document.getElementById('schedule-month-label');
+      if (!grid || !label) return;
+
+      const year = scheduleCalendarDate.getFullYear();
+      const month = scheduleCalendarDate.getMonth();
+      const firstDay = new Date(year, month, 1).getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const today = new Date();
+      const todayKey = formatScheduleDate(today.getFullYear(), today.getMonth(), today.getDate());
+      label.innerText = `${year}년 ${month + 1}월`;
+      grid.innerHTML = '';
+
+      const totalCells = Math.ceil((firstDay + daysInMonth) / 7) * 7;
+      for (let cell = 0; cell < totalCells; cell++) {
+        const day = cell - firstDay + 1;
+        if (day < 1 || day > daysInMonth) {
+          const blank = document.createElement('div');
+          blank.className = 'min-h-28 border-r border-b border-slate-200 bg-slate-50/60';
+          grid.appendChild(blank);
+          continue;
+        }
+
+        const dateKey = formatScheduleDate(year, month, day);
+        const weekday = cell % 7;
+        const dayEvents = (appData.scheduleEvents || []).filter(e => e.date === dateKey);
+        const cellEl = document.createElement('button');
+        cellEl.type = 'button';
+        cellEl.onclick = () => openScheduleDayModal(dateKey);
+        cellEl.className = `min-h-28 border-r border-b border-slate-200 bg-white hover:bg-skybrand-50/50 transition-colors text-left p-2 align-top ${dateKey === todayKey ? 'ring-2 ring-inset ring-skybrand-400' : ''}`;
+
+        const dayColor = weekday === 0 ? 'text-rose-500' : weekday === 6 ? 'text-blue-500' : 'text-slate-700';
+        let eventsHtml = '';
+        dayEvents.slice(0, 3).forEach(event => {
+          const members = getScheduleEventMembers(event);
+          const content = escapeHtml(event.content || '');
+          const names = members.map(m => m.name).join(', ') || '미지정';
+          const memberBadges = members.length
+            ? members.map(m => `<span class="inline-block rounded px-1.5 py-0.5 text-[9px] font-black text-white truncate max-w-full" style="background:${safeScheduleColor(m.color)}">${escapeHtml(m.name)}</span>`).join('')
+            : '<span class="inline-block rounded px-1.5 py-0.5 text-[9px] font-black text-white bg-slate-500">미지정</span>';
+          eventsHtml += `<div class="mt-1 rounded-md p-1 bg-slate-50 border border-slate-200 shadow-sm" title="${escapeHtml(names)} - ${content}"><div class="flex flex-wrap gap-1">${memberBadges}</div></div>`;
+        });
+        if (dayEvents.length > 3) eventsHtml += `<div class="mt-1 text-[10px] font-bold text-slate-500">+ ${dayEvents.length - 3}건 더보기</div>`;
+
+        cellEl.innerHTML = `<div class="flex justify-between items-center mb-1"><span class="w-7 h-7 flex items-center justify-center rounded-full text-xs font-black ${dayColor} ${dateKey === todayKey ? 'bg-skybrand-600 !text-white' : ''}">${day}</span>${dayEvents.length ? `<span class="text-[9px] font-bold text-slate-400">${dayEvents.length}건</span>` : ''}</div>${eventsHtml}`;
+        grid.appendChild(cellEl);
+      }
+    }
+
+    function renderScheduleMembers() {
+      const wrap = document.getElementById('schedule-member-list');
+      if (!wrap) return;
+      const members = appData.scheduleMembers || [];
+      if (!members.length) {
+        wrap.innerHTML = '<div class="w-full text-center py-5 text-xs text-slate-400 border border-dashed border-slate-300 rounded-xl bg-white">등록된 이름이 없습니다. 위에서 이름과 색상을 먼저 추가해주세요.</div>';
+        renderScheduleSearchMembers();
+        return;
+      }
+      wrap.innerHTML = members.map(member => {
+        const color = safeScheduleColor(member.color);
+        return `<div class="inline-flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-sm"><span class="w-3 h-3 rounded-full" style="background:${color}"></span><span class="text-xs font-black text-slate-700">${escapeHtml(member.name)}</span><button type="button" onclick="deleteScheduleMember('${String(member.id).replace(/'/g, "\\'")}')" class="ml-1 text-slate-400 hover:text-rose-500" title="이름 삭제"><i data-lucide="x" class="w-3.5 h-3.5"></i></button></div>`;
+      }).join('');
+      renderScheduleSearchMembers();
+      lucide.createIcons();
+    }
+
+    function updateScheduleSearchMonthLabel() {
+      const el = document.getElementById('schedule-search-month-label');
+      if (!el) return;
+      el.innerText = `${scheduleCalendarDate.getFullYear()}년 ${scheduleCalendarDate.getMonth() + 1}월`;
+    }
+
+    function toggleScheduleSearchPanel() {
+      const panel = document.getElementById('schedule-search-panel');
+      if (!panel) return;
+      panel.classList.toggle('hidden');
+      if (!panel.classList.contains('hidden')) {
+        updateScheduleSearchMonthLabel();
+        renderScheduleSearchMembers();
+      }
+      lucide.createIcons();
+    }
+
+    function renderScheduleSearchMembers() {
+      const wrap = document.getElementById('schedule-search-member-list');
+      if (!wrap) return;
+      const checkedIds = new Set(Array.from(document.querySelectorAll('.schedule-search-member-checkbox:checked')).map(cb => String(cb.value)));
+      const members = appData.scheduleMembers || [];
+      if (!members.length) {
+        wrap.innerHTML = '<div class="col-span-full py-5 text-center text-xs text-slate-400 border border-dashed border-slate-300 rounded-xl bg-white">검색할 이름이 없습니다. 먼저 위의 이름 및 색상 관리에서 이름을 추가해주세요.</div>';
+        const result = document.getElementById('schedule-search-result');
+        if (result) result.classList.add('hidden');
+        scheduleSearchHasRun = false;
+        return;
+      }
+      wrap.innerHTML = members.map(m => {
+        const color = safeScheduleColor(m.color);
+        const checked = checkedIds.has(String(m.id)) ? 'checked' : '';
+        return `<label class="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2.5 cursor-pointer hover:border-skybrand-300 select-none shadow-sm"><input type="checkbox" class="schedule-search-member-checkbox w-4 h-4 rounded border-slate-300 text-skybrand-600 focus:ring-skybrand-500" value="${escapeHtml(m.id)}" ${checked}><span class="w-3 h-3 rounded-full shrink-0" style="background:${color}"></span><span class="text-xs font-black text-slate-700 truncate">${escapeHtml(m.name)}</span></label>`;
+      }).join('');
+    }
+
+    function toggleAllScheduleSearchMembers(checked=true) {
+      document.querySelectorAll('.schedule-search-member-checkbox').forEach(cb => cb.checked = !!checked);
+    }
+
+    function searchScheduleByMembers() {
+      const selectedIds = Array.from(document.querySelectorAll('.schedule-search-member-checkbox:checked')).map(cb => String(cb.value));
+      if (!selectedIds.length) {
+        alert('검색할 이름을 한 명 이상 선택해주세요.');
+        return;
+      }
+      scheduleSearchHasRun = true;
+      renderScheduleSearchResults();
+    }
+
+    function renderScheduleSearchResults() {
+      const result = document.getElementById('schedule-search-result');
+      if (!result) return;
+      const selectedIds = Array.from(document.querySelectorAll('.schedule-search-member-checkbox:checked')).map(cb => String(cb.value));
+      if (!selectedIds.length) {
+        result.classList.add('hidden');
+        scheduleSearchHasRun = false;
+        return;
+      }
+
+      const year = scheduleCalendarDate.getFullYear();
+      const month = scheduleCalendarDate.getMonth();
+      const monthPrefix = `${year}-${schedulePad(month + 1)}-`;
+      const members = (appData.scheduleMembers || []).filter(m => selectedIds.includes(String(m.id)));
+      const monthEvents = (appData.scheduleEvents || []).filter(e => String(e.date || '').startsWith(monthPrefix));
+      const unionDates = new Set();
+
+      const cards = members.map(member => {
+        const dates = Array.from(new Set(
+          monthEvents
+            .filter(event => scheduleEventHasMember(event, member.id))
+            .map(event => event.date)
+        )).sort();
+        dates.forEach(d => unionDates.add(d));
+        const dayLabels = dates.length
+          ? dates.map(d => `<span class="inline-flex items-center px-2 py-1 rounded-lg bg-slate-100 text-slate-600 text-[10px] font-bold">${Number(d.slice(-2))}일</span>`).join('')
+          : '<span class="text-[11px] text-slate-400">등록된 일정 없음</span>';
+        return `<div class="bg-white border border-slate-200 rounded-xl p-3 shadow-sm"><div class="flex items-center justify-between gap-3"><div class="flex items-center gap-2 min-w-0"><span class="w-3.5 h-3.5 rounded-full shrink-0" style="background:${safeScheduleColor(member.color)}"></span><span class="text-sm font-black text-slate-800 truncate">${escapeHtml(member.name)}</span></div><div class="shrink-0"><span class="text-xl font-black text-skybrand-600">${dates.length}</span><span class="text-xs font-bold text-slate-500 ml-1">일</span></div></div><div class="mt-2 pt-2 border-t border-slate-100 flex flex-wrap gap-1">${dayLabels}</div></div>`;
+      }).join('');
+
+      const selectedNames = members.map(m => m.name).join(', ');
+      result.innerHTML = `<div class="rounded-2xl border border-skybrand-200 bg-skybrand-50/50 p-4"><div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3"><div><div class="text-xs font-black text-skybrand-700">${year}년 ${month + 1}월 검색 결과</div><div class="text-[11px] text-slate-500 mt-1">선택: ${escapeHtml(selectedNames)}</div></div><div class="bg-white border border-skybrand-200 rounded-xl px-4 py-2 text-right"><div class="text-[10px] font-bold text-slate-500">선택 인원 전체 고유 일정일</div><div><span class="text-2xl font-black text-skybrand-700">${unionDates.size}</span><span class="text-xs font-bold text-slate-500 ml-1">일</span></div></div></div><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">${cards}</div><p class="text-[10px] text-slate-400 mt-3">※ 같은 사람이 같은 날짜에 일정이 여러 건 있어도 1일로 계산합니다. 전체 고유 일정일도 같은 날짜는 한 번만 계산합니다.</p></div>`;
+      result.classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function addScheduleMember() {
+      const nameInput = document.getElementById('schedule-member-name');
+      const colorInput = document.getElementById('schedule-member-color');
+      const name = (nameInput?.value || '').trim();
+      const color = safeScheduleColor(colorInput?.value || '#0284c7');
+      if (!name) { alert('추가할 이름을 입력해주세요.'); nameInput?.focus(); return; }
+      if ((appData.scheduleMembers || []).some(m => (m.name || '').trim() === name)) { alert('같은 이름이 이미 등록되어 있습니다.'); return; }
+      appData.scheduleMembers = appData.scheduleMembers || [];
+      appData.scheduleMembers.push({ id: String(Date.now()), name, color });
+      nameInput.value = '';
+      renderScheduleMembers(); renderScheduleCalendar(); if (scheduleSearchHasRun) renderScheduleSearchResults(); triggerAutoSync();
+    }
+
+    function deleteScheduleMember(id) {
+      const member = (appData.scheduleMembers || []).find(m => String(m.id) === String(id));
+      if (!member) return;
+      const usedCount = (appData.scheduleEvents || []).filter(e => scheduleEventHasMember(e, id)).length;
+      const msg = usedCount > 0
+        ? `'${member.name}' 이름이 ${usedCount}개의 일정에 사용 중입니다. 이름 목록에서는 삭제되지만 기존 일정의 이름과 색상은 그대로 유지됩니다. 삭제할까요?`
+        : `'${member.name}' 이름을 삭제할까요?`;
+      if (!confirm(msg)) return;
+      appData.scheduleMembers = appData.scheduleMembers.filter(m => String(m.id) !== String(id));
+      renderScheduleMembers(); renderScheduleCalendar(); if (scheduleSearchHasRun) renderScheduleSearchResults(); triggerAutoSync();
+    }
+
+    function openScheduleDayModal(dateKey) {
+      selectedScheduleDate = dateKey;
+      const [y, m, d] = dateKey.split('-').map(Number);
+      const dayName = ['일','월','화','수','목','금','토'][new Date(y, m - 1, d).getDay()];
+      document.getElementById('schedule-modal-date-title').innerText = `${y}년 ${m}월 ${d}일 (${dayName})`;
+      document.getElementById('schedule-event-content').value = '';
+      renderScheduleMemberOptions();
+      renderScheduleDayEvents();
+      document.getElementById('schedule-day-modal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeScheduleDayModal() {
+      document.getElementById('schedule-day-modal').classList.add('hidden');
+      selectedScheduleDate = '';
+    }
+
+    function renderScheduleMemberOptions() {
+      const list = document.getElementById('schedule-event-member-list');
+      const guide = document.getElementById('schedule-no-member-guide');
+      const saveBtn = document.getElementById('schedule-save-btn');
+      if (!list) return;
+      const members = appData.scheduleMembers || [];
+      if (!members.length) {
+        list.innerHTML = '<div class="col-span-full py-3 text-center text-xs text-slate-400">등록된 이름 없음</div>';
+        if (guide) guide.classList.remove('hidden');
+        if (saveBtn) saveBtn.disabled = true;
+        if (saveBtn) saveBtn.classList.add('opacity-40', 'cursor-not-allowed');
+      } else {
+        list.innerHTML = members.map(m => {
+          const color = safeScheduleColor(m.color);
+          return `<label class="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-2.5 py-2 cursor-pointer hover:border-skybrand-300 select-none"><input type="checkbox" class="schedule-event-member-checkbox w-4 h-4 rounded border-slate-300 text-skybrand-600 focus:ring-skybrand-500" value="${escapeHtml(m.id)}"><span class="w-3 h-3 rounded-full shrink-0" style="background:${color}"></span><span class="text-xs font-black text-slate-700 truncate">${escapeHtml(m.name)}</span></label>`;
+        }).join('');
+        if (guide) guide.classList.add('hidden');
+        if (saveBtn) saveBtn.disabled = false;
+        if (saveBtn) saveBtn.classList.remove('opacity-40', 'cursor-not-allowed');
+      }
+    }
+
+    function toggleAllScheduleMembers(checked=true) {
+      document.querySelectorAll('.schedule-event-member-checkbox').forEach(cb => cb.checked = !!checked);
+    }
+
+    function renderScheduleDayEvents() {
+      const wrap = document.getElementById('schedule-day-existing-list');
+      const count = document.getElementById('schedule-modal-count');
+      if (!wrap || !selectedScheduleDate) return;
+      const events = (appData.scheduleEvents || []).filter(e => e.date === selectedScheduleDate);
+      if (count) count.innerText = `${events.length}건`;
+      if (!events.length) {
+        wrap.innerHTML = '<div class="py-5 text-center text-xs text-slate-400 border border-dashed border-slate-300 rounded-xl">등록된 일정이 없습니다.</div>';
+        return;
+      }
+      wrap.innerHTML = events.map(event => {
+        const members = getScheduleEventMembers(event);
+        const badges = members.length
+          ? members.map(m => `<span class="inline-flex items-center rounded-lg px-2 py-1 text-[11px] font-black text-white" style="background:${safeScheduleColor(m.color)}">${escapeHtml(m.name)}</span>`).join('')
+          : '<span class="inline-flex items-center rounded-lg px-2 py-1 text-[11px] font-black text-white bg-slate-500">미지정</span>';
+        return `<div class="rounded-xl border border-slate-200 p-3 bg-slate-50"><div class="flex items-start gap-3"><div class="flex-grow min-w-0"><div class="flex flex-wrap gap-1.5 mb-2">${badges}</div><div class="text-xs text-slate-600 whitespace-pre-wrap break-words">${escapeHtml(event.content || '')}</div></div><button type="button" onclick="deleteScheduleEvent('${String(event.id).replace(/'/g, "\'")}')" class="shrink-0 text-rose-500 hover:bg-rose-50 rounded-lg px-2 py-1 text-[11px] font-bold">삭제</button></div></div>`;
+      }).join('');
+    }
+
+    function saveScheduleEvent() {
+      if (!selectedScheduleDate) return;
+      const selectedIds = Array.from(document.querySelectorAll('.schedule-event-member-checkbox:checked')).map(cb => String(cb.value));
+      const content = (document.getElementById('schedule-event-content').value || '').trim();
+      const selectedMembers = (appData.scheduleMembers || []).filter(m => selectedIds.includes(String(m.id)));
+      if (!selectedMembers.length) { alert('이름을 한 명 이상 선택해주세요.'); return; }
+      if (!content) { alert('일정 내용을 입력해주세요.'); document.getElementById('schedule-event-content').focus(); return; }
+      appData.scheduleEvents = appData.scheduleEvents || [];
+      appData.scheduleEvents.push({
+        id: String(Date.now()),
+        date: selectedScheduleDate,
+        memberIds: selectedMembers.map(m => String(m.id)),
+        members: selectedMembers.map(m => ({ id: String(m.id), name: m.name, color: safeScheduleColor(m.color) })),
+        content,
+        createdAt: new Date().toISOString()
+      });
+      document.getElementById('schedule-event-content').value = '';
+      toggleAllScheduleMembers(false);
+      renderScheduleDayEvents();
+      renderScheduleCalendar();
+      if (scheduleSearchHasRun) renderScheduleSearchResults();
+      triggerAutoSync();
+    }
+
+    function deleteScheduleEvent(id) {
+      if (!confirm('이 일정을 삭제할까요?')) return;
+      appData.scheduleEvents = (appData.scheduleEvents || []).filter(e => String(e.id) !== String(id));
+      renderScheduleDayEvents(); renderScheduleCalendar(); if (scheduleSearchHasRun) renderScheduleSearchResults(); triggerAutoSync();
     }
 
     let activeLightboxAlbum = null; let activeLightboxIndex = 0;
