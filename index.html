@@ -1175,24 +1175,61 @@
       const results = new Array(items.length);
       let completed = 0;
 
-      const folderId = await ensureProjectDriveFolder(folderName);
+      // 최신 Apps Script에서는 폴더를 먼저 만들고 folderId를 받아 병렬 업로드합니다.
+      // 예전 배포본처럼 getOrCreateFolder 기능이 없는 경우에도 사진 저장이 막히지 않도록
+      // 첫 사진을 단독 업로드해 폴더를 먼저 확보한 뒤 나머지를 저장합니다.
+      let folderId = await ensureProjectDriveFolder(folderName);
+      let startIndex = 0;
+
       if (!folderId) {
-        alert("Google Drive 공사 폴더를 준비하지 못했습니다. Apps Script를 최신 버전으로 재배포했는지 확인해주세요.");
-        return results;
+        const first = items[0];
+        const firstResponse = await uploadImageToDrive(first.file, folderName, "");
+
+        if (!firstResponse || !firstResponse.url || firstResponse.localOnly) {
+          alert("Google Drive 사진 저장에 실패했습니다. Apps Script 웹앱의 배포 권한과 URL을 확인해주세요.");
+          return results;
+        }
+
+        completed++;
+        folderId = firstResponse.folderId || "";
+        if (folderId) projectDriveFolderIds.set(folderName, folderId);
+        if (onProgress) onProgress(completed, items.length);
+        results[0] = {
+          url: firstResponse.url,
+          key: first.key,
+          folderId: folderId
+        };
+        startIndex = 1;
       }
 
+      const remaining = items.slice(startIndex).map((item, offset) => ({
+        item,
+        index: startIndex + offset
+      }));
+
+      if (remaining.length === 0) return results;
+
+      // folderId가 있으면 같은 폴더로 안전하게 3개씩 병렬 업로드.
+      // 구버전 Apps Script가 folderId를 반환하지 않으면 폴더 중복 생성을 막기 위해 순차 업로드.
+      const concurrency = folderId ? 3 : 1;
+
       await runWithConcurrency(
-        items.map((item, index) => ({ item, index })),
-        3,
+        remaining,
+        concurrency,
         async ({ item, index }) => {
-          const response = await uploadImageToDrive(item.file, folderName, folderId);
+          const response = await uploadImageToDrive(item.file, folderName, folderId || "");
           completed++;
-          if (response && response.folderId) projectDriveFolderIds.set(folderName, response.folderId);
+
+          if (response && response.folderId) {
+            folderId = response.folderId;
+            projectDriveFolderIds.set(folderName, folderId);
+          }
+
           if (onProgress) onProgress(completed, items.length);
           results[index] = {
             url: response ? response.url : null,
             key: item.key,
-            folderId: response ? response.folderId : folderId
+            folderId: response && response.folderId ? response.folderId : folderId
           };
         }
       );
