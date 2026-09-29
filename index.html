@@ -870,23 +870,19 @@
     }
 
 
-    // 앨범 전체삭제용: 사진을 하나씩 지우지 않고 해당 공사 폴더 자체를 Drive 휴지통으로 이동합니다.
+    // 앨범 전체삭제용: 공사 폴더를 Drive 휴지통으로 이동합니다.
     async function deleteProjectFolderFromDrive(folderId, folderName) {
       if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("여기에")) {
         return { status: "error", error: "Google Apps Script 주소가 설정되지 않았습니다." };
       }
       try {
-        const res = await fetch(GOOGLE_SCRIPT_URL, {
-          method: "POST",
-          body: JSON.stringify({
-            action: "deleteProjectFolder",
-            folderId: folderId || "",
-            folderName: folderName || ""
-          })
-        });
-        return await res.json();
+        return await postToGoogleScript({
+          action: 'deleteProjectFolder',
+          folderId: folderId || '',
+          folderName: folderName || ''
+        }, { attempts: 3, timeoutMs: 45000 });
       } catch (err) {
-        return { status: "error", error: String(err) };
+        return { status: 'error', error: String(err && err.message ? err.message : err) };
       }
     }
 
@@ -911,6 +907,19 @@
     let tempExtraAmounts = [];
     let tempDepositAmounts = [];
 
+    function saveLocalCacheWithoutPhotoPreviews() {
+      try {
+        localStorage.setItem('gwangjin_projects', JSON.stringify(appData.projects || []));
+        const compactAlbums = (appData.projectAlbums || []).map(album => ({ ...album, photoPreviews: [] }));
+        localStorage.setItem('gwangjin_project_albums', JSON.stringify(compactAlbums));
+        localStorage.setItem('gwangjin_tax_invoices', JSON.stringify(appData.taxInvoices || []));
+        localStorage.setItem('gwangjin_schedule_members', JSON.stringify(appData.scheduleMembers || []));
+        localStorage.setItem('gwangjin_schedule_events', JSON.stringify(appData.scheduleEvents || []));
+      } catch (err) {
+        console.warn('브라우저 임시저장 공간이 부족하여 일부 캐시를 생략합니다.', err);
+      }
+    }
+
     async function fetchDriveData(showAlert = false) {
       if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("여기에")) return;
       try {
@@ -926,27 +935,59 @@
             scheduleMembers: Array.isArray(data.scheduleMembers) ? data.scheduleMembers : localScheduleMembers,
             scheduleEvents: Array.isArray(data.scheduleEvents) ? data.scheduleEvents : localScheduleEvents
           };
-          localStorage.setItem('gwangjin_projects', JSON.stringify(appData.projects));
-          localStorage.setItem('gwangjin_project_albums', JSON.stringify(appData.projectAlbums));
-          localStorage.setItem('gwangjin_tax_invoices', JSON.stringify(appData.taxInvoices));
-          localStorage.setItem('gwangjin_schedule_members', JSON.stringify(appData.scheduleMembers));
-          localStorage.setItem('gwangjin_schedule_events', JSON.stringify(appData.scheduleEvents));
+          saveLocalCacheWithoutPhotoPreviews();
           filterGallery(currentFilter);
           renderProjects(); renderManagerAlbumList(); renderTaxInvoiceList(); renderScheduleCalendar(); renderScheduleMembers();
+          setTimeout(() => repairMissingAlbumPreviews(), 200);
           if (showAlert) alert("구글 드라이브와 동기화 완료!");
         }
       } catch (err) {}
     }
 
     async function triggerAutoSync() {
-      localStorage.setItem('gwangjin_projects', JSON.stringify(appData.projects));
-      localStorage.setItem('gwangjin_project_albums', JSON.stringify(appData.projectAlbums));
-      localStorage.setItem('gwangjin_tax_invoices', JSON.stringify(appData.taxInvoices));
-      localStorage.setItem('gwangjin_schedule_members', JSON.stringify(appData.scheduleMembers || []));
-      localStorage.setItem('gwangjin_schedule_events', JSON.stringify(appData.scheduleEvents || []));
+      saveLocalCacheWithoutPhotoPreviews();
       if (GOOGLE_SCRIPT_URL && !GOOGLE_SCRIPT_URL.includes("여기에")) {
-        try { fetch(GOOGLE_SCRIPT_URL, { method: "POST", body: JSON.stringify({ action: "syncData", payload: appData }) }); } catch (err) {}
+        try {
+          await postToGoogleScript({ action: 'syncData', payload: appData }, { attempts: 2, timeoutMs: 45000 });
+          return true;
+        } catch (err) {
+          console.warn('Drive 장부 동기화 실패:', err);
+          return false;
+        }
       }
+      return true;
+    }
+
+    // Apps Script 호출 공통 함수: 일시적인 네트워크/배포 지연에 대비해 재시도합니다.
+    async function postToGoogleScript(payload, options = {}) {
+      const attempts = Math.max(1, Number(options.attempts || 3));
+      const timeoutMs = Math.max(5000, Number(options.timeoutMs || 45000));
+      let lastError = null;
+
+      for (let attempt = 1; attempt <= attempts; attempt++) {
+        const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+        const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+        try {
+          const res = await fetch(GOOGLE_SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+            signal: controller ? controller.signal : undefined
+          });
+          const text = await res.text();
+          let data;
+          try { data = JSON.parse(text); }
+          catch (_) { throw new Error('Apps Script 응답이 JSON이 아닙니다. 새 버전으로 재배포했는지 확인해주세요.'); }
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          if (data && data.status === 'error') throw new Error(data.error || 'Apps Script 처리 오류');
+          return data;
+        } catch (err) {
+          lastError = err;
+          if (attempt < attempts) await new Promise(r => setTimeout(r, 700 * attempt));
+        } finally {
+          if (timer) clearTimeout(timer);
+        }
+      }
+      throw lastError || new Error('Google Apps Script 요청에 실패했습니다.');
     }
 
     // 사진 업로드 상태 관리
@@ -976,12 +1017,13 @@
     }
 
     async function compressPhotoForWeb(fileOrBlob) {
-      // 메인페이지 표시와 업로드 속도를 위해 웹용 사진 1개로 축소합니다.
-      // 원본 파일은 Drive에 따로 저장하지 않습니다.
+      // Drive에는 긴 변 1600px 웹용 사진 1개만 저장합니다.
+      // 화면 미리보기는 별도 Drive 파일을 만들지 않고 작은 data URL을 JSON에 저장합니다.
       const MAX_DIMENSION = 1600;
       const JPEG_QUALITY = 0.80;
+      const PREVIEW_DIMENSION = 360;
+      const PREVIEW_QUALITY = 0.58;
 
-      // 이미지가 아닌 파일은 변환하지 않습니다.
       if (!fileOrBlob || !(fileOrBlob.type || '').startsWith('image/')) {
         return {
           blob: fileOrBlob,
@@ -989,7 +1031,8 @@
           contentType: fileOrBlob?.type || 'application/octet-stream',
           sourceSize: fileOrBlob?.size || 0,
           width: 0,
-          height: 0
+          height: 0,
+          previewDataUrl: ''
         };
       }
 
@@ -999,8 +1042,8 @@
           const img = new Image();
           img.onload = () => {
             try {
-              let width = img.naturalWidth || img.width;
-              let height = img.naturalHeight || img.height;
+              const width = img.naturalWidth || img.width;
+              const height = img.naturalHeight || img.height;
               const scale = Math.min(1, MAX_DIMENSION / Math.max(width, height));
               const targetWidth = Math.max(1, Math.round(width * scale));
               const targetHeight = Math.max(1, Math.round(height * scale));
@@ -1013,53 +1056,63 @@
               ctx.fillRect(0, 0, targetWidth, targetHeight);
               ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
 
+              const previewScale = Math.min(1, PREVIEW_DIMENSION / Math.max(width, height));
+              const previewCanvas = document.createElement('canvas');
+              previewCanvas.width = Math.max(1, Math.round(width * previewScale));
+              previewCanvas.height = Math.max(1, Math.round(height * previewScale));
+              const pctx = previewCanvas.getContext('2d', { alpha: false });
+              pctx.fillStyle = '#ffffff';
+              pctx.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
+              pctx.drawImage(img, 0, 0, previewCanvas.width, previewCanvas.height);
+              const previewDataUrl = previewCanvas.toDataURL('image/jpeg', PREVIEW_QUALITY);
+
               canvas.toBlob((blob) => {
+                const originalName = fileOrBlob.name || `photo_${Date.now()}`;
+                const baseName = originalName.replace(/\.[^.]+$/, '') || `photo_${Date.now()}`;
                 if (!blob) {
                   resolve({
                     blob: fileOrBlob,
-                    fileName: fileOrBlob.name || `photo_${Date.now()}`,
+                    fileName: originalName,
                     contentType: fileOrBlob.type || 'image/jpeg',
                     sourceSize: fileOrBlob.size || 0,
                     width,
-                    height
+                    height,
+                    previewDataUrl
                   });
                   return;
                 }
-
-                const originalName = fileOrBlob.name || `photo_${Date.now()}`;
-                const baseName = originalName.replace(/\.[^.]+$/, '') || `photo_${Date.now()}`;
                 resolve({
                   blob,
                   fileName: `${baseName}.jpg`,
                   contentType: 'image/jpeg',
                   sourceSize: fileOrBlob.size || 0,
                   width: targetWidth,
-                  height: targetHeight
+                  height: targetHeight,
+                  previewDataUrl
                 });
               }, 'image/jpeg', JPEG_QUALITY);
             } catch (err) {
-              console.error('사진 축소 실패, 원본 업로드로 전환:', err);
+              console.error('사진 축소 실패:', err);
               resolve({
                 blob: fileOrBlob,
                 fileName: fileOrBlob.name || `photo_${Date.now()}`,
                 contentType: fileOrBlob.type || 'image/jpeg',
                 sourceSize: fileOrBlob.size || 0,
                 width: 0,
-                height: 0
+                height: 0,
+                previewDataUrl: String(e.target.result || '')
               });
             }
           };
-          img.onerror = () => {
-            // 브라우저가 읽지 못하는 형식은 원본으로 보내되 서버에서 1개만 저장합니다.
-            resolve({
-              blob: fileOrBlob,
-              fileName: fileOrBlob.name || `photo_${Date.now()}`,
-              contentType: fileOrBlob.type || 'application/octet-stream',
-              sourceSize: fileOrBlob.size || 0,
-              width: 0,
-              height: 0
-            });
-          };
+          img.onerror = () => resolve({
+            blob: fileOrBlob,
+            fileName: fileOrBlob.name || `photo_${Date.now()}`,
+            contentType: fileOrBlob.type || 'application/octet-stream',
+            sourceSize: fileOrBlob.size || 0,
+            width: 0,
+            height: 0,
+            previewDataUrl: ''
+          });
           img.src = e.target.result;
         };
         reader.onerror = () => resolve({
@@ -1068,7 +1121,8 @@
           contentType: fileOrBlob.type || 'application/octet-stream',
           sourceSize: fileOrBlob.size || 0,
           width: 0,
-          height: 0
+          height: 0,
+          previewDataUrl: ''
         });
         reader.readAsDataURL(fileOrBlob);
       });
@@ -1083,157 +1137,97 @@
       const uploadPromise = (async () => {
         const prepared = await compressPhotoForWeb(fileOrBlob);
         const uploadBlob = prepared.blob;
-
         const dataUrl = await new Promise((resolve) => {
           const reader = new FileReader();
           reader.onload = (e) => resolve(String(e.target.result || ''));
           reader.onerror = () => resolve('');
           reader.readAsDataURL(uploadBlob);
         });
-
-        if (!dataUrl) {
-          return { url: null, folderId: knownFolderId || "", fileId: "" };
-        }
+        if (!dataUrl) throw new Error('사진을 읽지 못했습니다.');
 
         const rawBase64 = dataUrl.split(',')[1];
+        const payload = {
+          action: 'uploadImage',
+          fileName: prepared.fileName,
+          contentType: prepared.contentType,
+          base64Data: rawBase64,
+          folderName,
+          folderId: knownFolderId,
+          clientFileKey: fileKey,
+          uploadSize: uploadBlob.size || 0,
+          imageWidth: prepared.width || 0,
+          imageHeight: prepared.height || 0,
+          webOptimized: true
+        };
 
-        if (GOOGLE_SCRIPT_URL && !GOOGLE_SCRIPT_URL.includes("여기에")) {
-          try {
-            const payload = {
-              action: "uploadImage",
-              fileName: prepared.fileName,
-              contentType: prepared.contentType,
-              base64Data: rawBase64,
-              folderName: folderName,
-              folderId: knownFolderId,
-              reuseExistingFolder: true,
-              clientFileKey: fileKey,
-              uploadSize: uploadBlob.size || 0,
-              sourceOriginalSize: prepared.sourceSize || 0,
-              imageWidth: prepared.width || 0,
-              imageHeight: prepared.height || 0,
-              webOptimized: true
-            };
-
-            const res = await fetch(GOOGLE_SCRIPT_URL, {
-              method: "POST",
-              body: JSON.stringify(payload)
-            });
-            const resJson = await res.json();
-            if (resJson && resJson.status === "success") {
-              if (resJson.folderId) projectDriveFolderIds.set(folderName, resJson.folderId);
-              return {
-                // 서버가 제공하는 웹 표시 URL을 우선 사용합니다.
-                url: resJson.displayUrl || resJson.url || "",
-                folderId: resJson.folderId || knownFolderId || "",
-                fileId: resJson.fileId || "",
-                reused: !!resJson.reused,
-                sourceOriginalSize: prepared.sourceSize || 0,
-                uploadedSize: Number(resJson.size || uploadBlob.size || 0)
-              };
-            }
-            console.error('Google Drive 사진 업로드 오류:', resJson);
-          } catch (err) {
-            console.error('Google Drive 웹용사진 업로드 실패:', err);
-          }
+        const resJson = await postToGoogleScript(payload, { attempts: 3, timeoutMs: 60000 });
+        if (!resJson || resJson.status !== 'success' || !resJson.fileId) {
+          throw new Error((resJson && resJson.error) || '사진 저장 결과를 확인하지 못했습니다.');
         }
+        if (resJson.folderId) projectDriveFolderIds.set(folderName, resJson.folderId);
 
-        // 서버 업로드 실패 시에만 현재 브라우저에서 미리보기로 사용합니다.
-        return { url: dataUrl, folderId: knownFolderId || "", fileId: "", localOnly: true };
-      })().finally(() => {
-        activePhotoUploads.delete(uploadKey);
-      });
+        return {
+          // 데이터에는 표시 전용 URL이 아니라 파일 ID가 들어 있는 canonical URL을 저장합니다.
+          url: resJson.url || `https://drive.google.com/uc?export=view&id=${encodeURIComponent(resJson.fileId)}`,
+          displayUrl: resJson.displayUrl || '',
+          preview: prepared.previewDataUrl || '',
+          folderId: resJson.folderId || knownFolderId || '',
+          fileId: resJson.fileId || '',
+          reused: !!resJson.reused,
+          uploadedSize: Number(resJson.size || uploadBlob.size || 0)
+        };
+      })().finally(() => activePhotoUploads.delete(uploadKey));
 
       activePhotoUploads.set(uploadKey, uploadPromise);
       return uploadPromise;
     }
 
-    // 공사명 폴더를 먼저 서버에서 정확히 1개 확보한 후, 모든 사진을 그 folderId로만 저장합니다.
     async function ensureProjectDriveFolder(folderName) {
-      const cached = projectDriveFolderIds.get(folderName) || "";
+      const cached = projectDriveFolderIds.get(folderName) || '';
       if (cached) return cached;
-      if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("여기에")) return "";
-
+      if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes('여기에')) return '';
       try {
-        const res = await fetch(GOOGLE_SCRIPT_URL, {
-          method: "POST",
-          body: JSON.stringify({ action: "getOrCreateFolder", folderName })
-        });
-        const data = await res.json();
-        if (data && data.status === "success" && data.folderId) {
+        const data = await postToGoogleScript({ action: 'getOrCreateFolder', folderName }, { attempts: 3, timeoutMs: 30000 });
+        if (data && data.status === 'success' && data.folderId) {
           projectDriveFolderIds.set(folderName, data.folderId);
           return data.folderId;
         }
       } catch (err) {
-        console.error("공사 폴더 준비 실패:", err);
+        console.warn('공사 폴더 준비 실패:', err);
       }
-      return "";
+      return '';
     }
 
     async function uploadPhotosToSingleProjectFolder(items, folderName, onProgress) {
       if (!items || items.length === 0) return [];
-      const results = new Array(items.length);
+      const results = [];
+      let folderId = await ensureProjectDriveFolder(folderName);
       let completed = 0;
 
-      // 최신 Apps Script에서는 폴더를 먼저 만들고 folderId를 받아 병렬 업로드합니다.
-      // 예전 배포본처럼 getOrCreateFolder 기능이 없는 경우에도 사진 저장이 막히지 않도록
-      // 첫 사진을 단독 업로드해 폴더를 먼저 확보한 뒤 나머지를 저장합니다.
-      let folderId = await ensureProjectDriveFolder(folderName);
-      let startIndex = 0;
-
-      if (!folderId) {
-        const first = items[0];
-        const firstResponse = await uploadImageToDrive(first.file, folderName, "");
-
-        if (!firstResponse || !firstResponse.url || firstResponse.localOnly) {
-          alert("Google Drive 사진 저장에 실패했습니다. Apps Script 웹앱의 배포 권한과 URL을 확인해주세요.");
-          return results;
-        }
-
-        completed++;
-        folderId = firstResponse.folderId || "";
-        if (folderId) projectDriveFolderIds.set(folderName, folderId);
-        if (onProgress) onProgress(completed, items.length);
-        results[0] = {
-          url: firstResponse.url,
-          key: first.key,
-          folderId: folderId
-        };
-        startIndex = 1;
-      }
-
-      const remaining = items.slice(startIndex).map((item, offset) => ({
-        item,
-        index: startIndex + offset
-      }));
-
-      if (remaining.length === 0) return results;
-
-      // folderId가 있으면 같은 폴더로 안전하게 3개씩 병렬 업로드.
-      // 구버전 Apps Script가 folderId를 반환하지 않으면 폴더 중복 생성을 막기 위해 순차 업로드.
-      const concurrency = folderId ? 3 : 1;
-
-      await runWithConcurrency(
-        remaining,
-        concurrency,
-        async ({ item, index }) => {
-          const response = await uploadImageToDrive(item.file, folderName, folderId || "");
-          completed++;
-
+      // Apps Script에 큰 base64 POST를 여러 개 동시에 보내면 간헐적으로 실패할 수 있어
+      // 안정성을 우선해 한 장씩 저장합니다. 각 장은 내부적으로 최대 3회 재시도합니다.
+      for (const item of items) {
+        try {
+          const response = await uploadImageToDrive(item.file, folderName, folderId || '');
           if (response && response.folderId) {
             folderId = response.folderId;
             projectDriveFolderIds.set(folderName, folderId);
           }
-
-          if (onProgress) onProgress(completed, items.length);
-          results[index] = {
-            url: response ? response.url : null,
+          results.push({
+            url: response.url,
+            preview: response.preview || '',
             key: item.key,
-            folderId: response && response.folderId ? response.folderId : folderId
-          };
+            folderId: response.folderId || folderId,
+            fileId: response.fileId || '',
+            ok: true
+          });
+        } catch (err) {
+          console.error('사진 저장 최종 실패:', item.file && item.file.name, err);
+          results.push({ url: null, preview: '', key: item.key, folderId, fileId: '', ok: false, error: String(err && err.message ? err.message : err) });
         }
-      );
-
+        completed++;
+        if (onProgress) onProgress(completed, items.length);
+      }
       return results;
     }
 
@@ -1611,6 +1605,78 @@
       renderGallery();
     }
 
+    let albumPreviewRepairRunning = false;
+
+    async function makeSmallPreviewFromDataUrl(dataUrl) {
+      if (!dataUrl || !String(dataUrl).startsWith('data:image/')) return '';
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          try {
+            const maxDim = 360;
+            const scale = Math.min(1, maxDim / Math.max(img.naturalWidth || img.width, img.naturalHeight || img.height));
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.max(1, Math.round((img.naturalWidth || img.width) * scale));
+            canvas.height = Math.max(1, Math.round((img.naturalHeight || img.height) * scale));
+            const ctx = canvas.getContext('2d', { alpha: false });
+            ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            resolve(canvas.toDataURL('image/jpeg', 0.58));
+          } catch (_) { resolve(''); }
+        };
+        img.onerror = () => resolve('');
+        img.src = dataUrl;
+      });
+    }
+
+    // 이전 버전에서 올린 앨범은 미리보기 데이터가 없을 수 있습니다.
+    // Drive 파일을 Apps Script가 한 번 읽어 작은 미리보기를 만들어 저장해 두고 이후에는 즉시 표시합니다.
+    async function repairMissingAlbumPreviews() {
+      if (albumPreviewRepairRunning || !GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes('여기에')) return;
+      albumPreviewRepairRunning = true;
+      let changed = false;
+      try {
+        for (const album of (appData.projectAlbums || [])) {
+          const photos = album.photos || [];
+          if (!Array.isArray(album.photoPreviews)) album.photoPreviews = [];
+          while (album.photoPreviews.length < photos.length) album.photoPreviews.push('');
+
+          for (let i = 0; i < photos.length; i++) {
+            if (album.photoPreviews[i]) continue;
+            const fileId = extractDriveFileId(photos[i]);
+            if (!fileId) continue;
+            try {
+              const data = await postToGoogleScript({ action: 'getImageData', fileId }, { attempts: 2, timeoutMs: 45000 });
+              if (data && data.status === 'success' && data.base64Data) {
+                const fullDataUrl = `data:${data.mimeType || 'image/jpeg'};base64,${data.base64Data}`;
+                const preview = await makeSmallPreviewFromDataUrl(fullDataUrl);
+                if (preview) {
+                  album.photoPreviews[i] = preview;
+                  changed = true;
+                }
+              }
+            } catch (err) {
+              console.warn('기존 앨범 미리보기 복구 실패:', album.title, i, err);
+            }
+          }
+        }
+        if (changed) {
+          renderGallery();
+          renderManagerAlbumList();
+          await triggerAutoSync();
+        }
+      } finally {
+        albumPreviewRepairRunning = false;
+      }
+    }
+
+    function getAlbumPhotoPreview(album, index) {
+      if (!album) return NO_IMAGE_PLACEHOLDER;
+      const previews = album.photoPreviews || [];
+      const photos = album.photos || [];
+      return previews[index] || getDisplayUrl(photos[index] || '');
+    }
+
     function renderGallery() {
       const grid = document.getElementById('gallery-grid'); const emptyBox = document.getElementById('gallery-empty'); grid.innerHTML = '';
       const filtered = currentFilter === '전체' ? appData.projectAlbums : appData.projectAlbums.filter(p => p.category === currentFilter);
@@ -1622,7 +1688,7 @@
         if (album.category === '가정용') badgeColor = "bg-blue-100 text-blue-700";
         if (album.category === '상가/빌딩') badgeColor = "bg-skybrand-100 text-skybrand-700";
         const photoCount = album.photos && album.photos.length > 0 ? album.photos.length : 0;
-        const thumb = photoCount > 0 ? album.photos[0] : NO_IMAGE_PLACEHOLDER;
+        const thumb = photoCount > 0 ? getAlbumPhotoPreview(album, 0) : NO_IMAGE_PLACEHOLDER;
         
         grid.innerHTML += `
           <div class="bg-white rounded-2xl overflow-hidden border shadow-sm hover:shadow-md transition-all cursor-pointer group" onclick="openLightbox('${album.id}')">
@@ -1647,7 +1713,7 @@
       if (!appData.projectAlbums || appData.projectAlbums.length === 0) { container.innerHTML = `<div class="p-8 text-center text-slate-400 text-xs">등록된 앨범이 없습니다.</div>`; return; }
       appData.projectAlbums.forEach(album => {
         const photoCount = album.photos && album.photos.length > 0 ? album.photos.length : 0;
-        const thumb = photoCount > 0 ? album.photos[0] : NO_IMAGE_PLACEHOLDER;
+        const thumb = photoCount > 0 ? getAlbumPhotoPreview(album, 0) : NO_IMAGE_PLACEHOLDER;
         const div = document.createElement('div');
         div.className = "bg-white rounded-2xl p-4 border border-slate-200 flex justify-between items-center cursor-pointer hover:border-skybrand-400 hover:shadow-md transition-all";
         div.onclick = () => openEditAlbumModal(album.id); 
@@ -1669,15 +1735,17 @@
     }
 
     let currentAlbumPhotos = [];
+    let currentAlbumPreviews = [];
     let currentAlbumFileKeys = [];
     let currentAlbumDriveFolderId = "";
-    function openAddProjectAlbumModal() { document.getElementById('project-album-modal').classList.remove('hidden'); document.getElementById('album-date').valueAsDate = new Date(); document.getElementById('album-title').value = ''; document.getElementById('album-desc').value = ''; currentAlbumPhotos = []; currentAlbumFileKeys = []; currentAlbumDriveFolderId = ""; renderAlbumPreviewGrid(); }
+    function openAddProjectAlbumModal() { document.getElementById('project-album-modal').classList.remove('hidden'); document.getElementById('album-date').valueAsDate = new Date(); document.getElementById('album-title').value = ''; document.getElementById('album-desc').value = ''; currentAlbumPhotos = []; currentAlbumPreviews = []; currentAlbumFileKeys = []; currentAlbumDriveFolderId = ""; renderAlbumPreviewGrid(); }
     
     function closeAddProjectAlbumModal() { 
       if (currentAlbumPhotos && currentAlbumPhotos.length > 0) {
         currentAlbumPhotos.forEach(url => deleteFileFromDrive(url));
       }
       currentAlbumPhotos = [];
+      currentAlbumPreviews = [];
       currentAlbumFileKeys = [];
       currentAlbumDriveFolderId = "";
       document.getElementById('project-album-modal').classList.add('hidden'); 
@@ -1727,10 +1795,14 @@
         (completed, total) => { text.innerText = `사진 저장 중... (${completed}/${total})`; }
       );
 
-      results.forEach(({ url, key, folderId }) => {
+      let failedCount = 0;
+      results.forEach(({ url, preview, key, folderId, ok }) => {
         if (folderId) currentAlbumDriveFolderId = folderId;
-        if (url && !currentAlbumPhotos.includes(url)) currentAlbumPhotos.push(url);
-        if (!url) {
+        if (ok && url && !currentAlbumPhotos.includes(url)) {
+          currentAlbumPhotos.push(url);
+          currentAlbumPreviews.push(preview || '');
+        } else if (!ok || !url) {
+          failedCount++;
           const i = currentAlbumFileKeys.indexOf(key);
           if (i >= 0) currentAlbumFileKeys.splice(i, 1);
         }
@@ -1740,16 +1812,19 @@
       icon.setAttribute('data-lucide', 'upload-cloud'); icon.classList.remove('animate-spin');
       text.innerText = "기기에서 사진 선택"; lucide.createIcons();
       input.value = '';
+      if (failedCount > 0) alert(`${uniqueFiles.length - failedCount}장은 저장됐고 ${failedCount}장은 저장에 실패했습니다. 실패한 사진만 다시 선택해주세요.`);
     }
 
     function renderAlbumPreviewGrid() {
       const grid = document.getElementById('album-preview-grid'); grid.innerHTML = ''; document.getElementById('album-photo-count').innerText = `${currentAlbumPhotos.length}장`;
       currentAlbumPhotos.forEach((src, idx) => {
         const div = document.createElement('div'); div.className = "relative h-16 rounded-lg overflow-hidden border";
-        div.innerHTML = `<img src="${getDisplayUrl(src)}" class="w-full h-full object-cover"><button type="button" class="absolute top-1 right-1 w-4 h-4 bg-rose-600 text-white rounded-full flex items-center justify-center text-[10px]">×</button>`;
+        const previewSrc = currentAlbumPreviews[idx] || getDisplayUrl(src);
+        div.innerHTML = `<img src="${previewSrc}" class="w-full h-full object-cover"><button type="button" class="absolute top-1 right-1 w-4 h-4 bg-rose-600 text-white rounded-full flex items-center justify-center text-[10px]">×</button>`;
         div.querySelector('button').onclick = () => { 
           const removedUrl = currentAlbumPhotos[idx];
           currentAlbumPhotos.splice(idx,1);
+          currentAlbumPreviews.splice(idx,1);
           currentAlbumFileKeys.splice(idx,1);
           deleteFileFromDrive(removedUrl); 
           renderAlbumPreviewGrid(); 
@@ -1760,20 +1835,21 @@
 
     function handleProjectAlbumSubmit(e) {
       e.preventDefault();
-      const newAlbum = { id: String(Date.now()), title: document.getElementById('album-title').value.trim(), category: document.getElementById('album-category').value, date: document.getElementById('album-date').value, desc: document.getElementById('album-desc').value.trim(), photos: [...currentAlbumPhotos], driveFolderId: currentAlbumDriveFolderId || projectDriveFolderIds.get(document.getElementById('album-title').value.trim()) || "" };
+      const newAlbum = { id: String(Date.now()), title: document.getElementById('album-title').value.trim(), category: document.getElementById('album-category').value, date: document.getElementById('album-date').value, desc: document.getElementById('album-desc').value.trim(), photos: [...currentAlbumPhotos], photoPreviews: [...currentAlbumPreviews], driveFolderId: currentAlbumDriveFolderId || projectDriveFolderIds.get(document.getElementById('album-title').value.trim()) || "" };
       appData.projectAlbums.unshift(newAlbum); 
       currentAlbumPhotos = [];
+      currentAlbumPreviews = [];
       currentAlbumFileKeys = [];
       currentAlbumDriveFolderId = "";
       document.getElementById('project-album-modal').classList.add('hidden');
       renderGallery(); renderManagerAlbumList(); triggerAutoSync(); 
     }
 
-    let activeEditAlbumId = null, stagedExistingPhotos = [], editNewPhotos = [], editNewFileKeys = [];
+    let activeEditAlbumId = null, stagedExistingPhotos = [], stagedExistingPreviews = [], editNewPhotos = [], editNewPreviews = [], editNewFileKeys = [];
     function openEditAlbumModal(id) {
       activeEditAlbumId = String(id); const album = appData.projectAlbums.find(a => a.id === activeEditAlbumId); if (!album) return;
       if (album.driveFolderId) projectDriveFolderIds.set(album.title, album.driveFolderId);
-      document.getElementById('edit-modal-title').innerText = `[공사명] ${album.title}`; stagedExistingPhotos = album.photos ? [...album.photos] : []; editNewPhotos = []; editNewFileKeys = [];
+      document.getElementById('edit-modal-title').innerText = `[공사명] ${album.title}`; stagedExistingPhotos = album.photos ? [...album.photos] : []; stagedExistingPreviews = album.photoPreviews ? [...album.photoPreviews] : stagedExistingPhotos.map(() => ''); editNewPhotos = []; editNewPreviews = []; editNewFileKeys = [];
       renderEditAlbumGrid(); document.getElementById('edit-album-modal').classList.remove('hidden');
     }
     
@@ -1782,6 +1858,7 @@
         editNewPhotos.forEach(url => deleteFileFromDrive(url));
       }
       editNewPhotos = [];
+      editNewPreviews = [];
       editNewFileKeys = [];
       document.getElementById('edit-album-modal').classList.add('hidden'); 
     }
@@ -1821,18 +1898,23 @@
         (completed, total) => { text.innerText = `사진 추가 중... (${completed}/${total})`; }
       );
 
-      results.forEach(({ url, key, folderId }) => {
+      let failedCount = 0;
+      results.forEach(({ url, preview, key, folderId, ok }) => {
         if (folderId && album) {
           album.driveFolderId = folderId;
           projectDriveFolderIds.set(album.title, folderId);
         }
-        if (url && !editNewPhotos.includes(url)) editNewPhotos.push(url);
-        if (!url) {
+        if (ok && url && !editNewPhotos.includes(url)) {
+          editNewPhotos.push(url);
+          editNewPreviews.push(preview || '');
+        } else if (!ok || !url) {
+          failedCount++;
           const i = editNewFileKeys.indexOf(key);
           if (i >= 0) editNewFileKeys.splice(i, 1);
         }
       });
       renderEditAlbumGrid();
+      if (failedCount > 0) alert(`${uniqueFiles.length - failedCount}장은 저장됐고 ${failedCount}장은 저장에 실패했습니다. 실패한 사진만 다시 선택해주세요.`);
 
       icon.setAttribute('data-lucide', 'image-plus'); icon.classList.remove('animate-spin');
       text.innerText = "기기에서 사진 선택 (해당 폴더로 저장)"; lucide.createIcons();
@@ -1844,16 +1926,19 @@
       if (stagedExistingPhotos.length === 0) { exGrid.innerHTML = '<span class="text-xs text-slate-400 col-span-4 text-center mt-2">기존 사진 없음</span>'; }
       stagedExistingPhotos.forEach((src, i) => {
         const div = document.createElement('div'); div.className = "relative h-20 rounded-lg overflow-hidden border bg-white";
-        div.innerHTML = `<img src="${getDisplayUrl(src)}" class="w-full h-full object-cover"><button type="button" class="absolute top-1 right-1 w-5 h-5 bg-rose-500 text-white rounded text-xs flex items-center justify-center shadow-md">×</button>`;
-        div.querySelector('button').onclick = () => { stagedExistingPhotos.splice(i,1); renderEditAlbumGrid(); }; exGrid.appendChild(div);
+        const previewSrc = stagedExistingPreviews[i] || getDisplayUrl(src);
+        div.innerHTML = `<img src="${previewSrc}" class="w-full h-full object-cover"><button type="button" class="absolute top-1 right-1 w-5 h-5 bg-rose-500 text-white rounded text-xs flex items-center justify-center shadow-md">×</button>`;
+        div.querySelector('button').onclick = () => { stagedExistingPhotos.splice(i,1); stagedExistingPreviews.splice(i,1); renderEditAlbumGrid(); }; exGrid.appendChild(div);
       });
       const newGrid = document.getElementById('edit-new-grid'); newGrid.innerHTML = '';
       editNewPhotos.forEach((src, i) => {
         const div = document.createElement('div'); div.className = "relative h-20 rounded-lg overflow-hidden border-2 border-skybrand-400 bg-white";
-        div.innerHTML = `<img src="${getDisplayUrl(src)}" class="w-full h-full object-cover"><button type="button" class="absolute top-1 right-1 w-5 h-5 bg-rose-500 text-white rounded text-xs flex items-center justify-center shadow-md">×</button>`;
+        const previewSrc = editNewPreviews[i] || getDisplayUrl(src);
+        div.innerHTML = `<img src="${previewSrc}" class="w-full h-full object-cover"><button type="button" class="absolute top-1 right-1 w-5 h-5 bg-rose-500 text-white rounded text-xs flex items-center justify-center shadow-md">×</button>`;
         div.querySelector('button').onclick = () => { 
           const removedUrl = editNewPhotos[i];
           editNewPhotos.splice(i,1);
+          editNewPreviews.splice(i,1);
           editNewFileKeys.splice(i,1);
           deleteFileFromDrive(removedUrl); 
           renderEditAlbumGrid(); 
@@ -1868,8 +1953,10 @@
         const deletedPhotos = album.photos.filter(url => !stagedExistingPhotos.includes(url));
         deletedPhotos.forEach(url => deleteFileFromDrive(url));
 
-        album.photos = [...stagedExistingPhotos, ...editNewPhotos]; 
+        album.photos = [...stagedExistingPhotos, ...editNewPhotos];
+        album.photoPreviews = [...stagedExistingPreviews, ...editNewPreviews];
         editNewPhotos = [];
+        editNewPreviews = [];
         editNewFileKeys = [];
         document.getElementById('edit-album-modal').classList.add('hidden');
         renderGallery(); renderManagerAlbumList(); alert('사진이 정상적으로 업데이트되었습니다!'); triggerAutoSync(); 
@@ -2163,7 +2250,7 @@
       appData.projectAlbums = appData.projectAlbums.filter(a => a.id !== String(id)); 
       renderGallery(); renderManagerAlbumList();
       await triggerAutoSync();
-      alert(`앨범 [${album.title}]과 Google Drive 공사 폴더가 삭제되었습니다.`);
+      alert(result.alreadyMissing ? `Drive 폴더는 이미 없었으며 앨범 [${album.title}] 기록을 정리했습니다.` : `앨범 [${album.title}]과 Google Drive 공사 폴더가 휴지통으로 이동되었습니다.`);
     }
 
     function deleteTaxInvoice(id) { 
@@ -2178,7 +2265,7 @@
         document.getElementById(`tab-content-${tab}`).classList.toggle('hidden', tab !== t);
         document.getElementById(`tab-btn-${tab}`).className = t === tab ? "px-5 py-3 rounded-t-xl bg-white text-skybrand-600 border-t-2 border-skybrand-600 shadow-sm transition-all flex items-center gap-1.5" : "px-5 py-3 rounded-t-xl bg-slate-200 text-slate-600 hover:bg-slate-300 transition-all flex items-center gap-1.5";
       });
-      if(t==='photos') renderManagerAlbumList();
+      if(t==='photos') { renderManagerAlbumList(); setTimeout(() => repairMissingAlbumPreviews(), 100); }
       if(t==='project') renderProjects();
       if(t==='tax') renderTaxInvoiceList();
       if(t==='schedule') { renderScheduleCalendar(); renderScheduleMembers(); renderScheduleSearchMembers(); updateScheduleSearchMonthLabel(); }
@@ -2560,11 +2647,11 @@
 
     function updateLightboxView() {
       if (!activeLightboxAlbum) return; const photos = activeLightboxAlbum.photos;
-      document.getElementById('lb-image').src = getDisplayUrl(photos[activeLightboxIndex]);
+      document.getElementById('lb-image').src = getAlbumPhotoPreview(activeLightboxAlbum, activeLightboxIndex);
       document.getElementById('lb-counter').innerText = `${activeLightboxIndex + 1} / ${photos.length}`;
       const thumbBar = document.getElementById('lb-thumbnail-bar'); thumbBar.innerHTML = '';
       photos.forEach((p, idx) => {
-        const img = document.createElement('img'); img.src = getDisplayUrl(p);
+        const img = document.createElement('img'); img.src = getAlbumPhotoPreview(activeLightboxAlbum, idx);
         img.className = `w-14 h-14 rounded-lg object-cover cursor-pointer border-2 transition-all ${idx === activeLightboxIndex ? 'border-skybrand-500 scale-105' : 'border-transparent opacity-50 hover:opacity-100'}`;
         img.onclick = () => { activeLightboxIndex = idx; updateLightboxView(); }; thumbBar.appendChild(img);
       });
