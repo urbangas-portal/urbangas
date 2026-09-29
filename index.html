@@ -869,6 +869,27 @@
       } catch (err) {}
     }
 
+
+    // 앨범 전체삭제용: 사진을 하나씩 지우지 않고 해당 공사 폴더 자체를 Drive 휴지통으로 이동합니다.
+    async function deleteProjectFolderFromDrive(folderId, folderName) {
+      if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("여기에")) {
+        return { status: "error", error: "Google Apps Script 주소가 설정되지 않았습니다." };
+      }
+      try {
+        const res = await fetch(GOOGLE_SCRIPT_URL, {
+          method: "POST",
+          body: JSON.stringify({
+            action: "deleteProjectFolder",
+            folderId: folderId || "",
+            folderName: folderName || ""
+          })
+        });
+        return await res.json();
+      } catch (err) {
+        return { status: "error", error: String(err) };
+      }
+    }
+
     function formatPhoneNumber(target) {
         let val = target.value.replace(/[^0-9]/g, ''); let res = '';
         if(val.startsWith('02')) {
@@ -1439,7 +1460,8 @@
 
     let currentAlbumPhotos = [];
     let currentAlbumFileKeys = [];
-    function openAddProjectAlbumModal() { document.getElementById('project-album-modal').classList.remove('hidden'); document.getElementById('album-date').valueAsDate = new Date(); document.getElementById('album-title').value = ''; document.getElementById('album-desc').value = ''; currentAlbumPhotos = []; currentAlbumFileKeys = []; renderAlbumPreviewGrid(); }
+    let currentAlbumDriveFolderId = "";
+    function openAddProjectAlbumModal() { document.getElementById('project-album-modal').classList.remove('hidden'); document.getElementById('album-date').valueAsDate = new Date(); document.getElementById('album-title').value = ''; document.getElementById('album-desc').value = ''; currentAlbumPhotos = []; currentAlbumFileKeys = []; currentAlbumDriveFolderId = ""; renderAlbumPreviewGrid(); }
     
     function closeAddProjectAlbumModal() { 
       if (currentAlbumPhotos && currentAlbumPhotos.length > 0) {
@@ -1447,6 +1469,7 @@
       }
       currentAlbumPhotos = [];
       currentAlbumFileKeys = [];
+      currentAlbumDriveFolderId = "";
       document.getElementById('project-album-modal').classList.add('hidden'); 
     }
     
@@ -1475,8 +1498,16 @@
         return;
       }
 
-      let targetFolder = document.getElementById('album-title').value.trim();
-      if (!targetFolder) targetFolder = "새_앨범_" + new Date().toISOString().slice(0,10);
+      const targetFolder = document.getElementById('album-title').value.trim();
+      if (!targetFolder) {
+        // 공사명과 Drive 폴더명을 항상 일치시키기 위해 공사명을 먼저 받습니다.
+        currentAlbumFileKeys = currentAlbumFileKeys.filter(k => !uniqueFiles.some(item => item.key === k));
+        icon.setAttribute('data-lucide', 'upload-cloud'); icon.classList.remove('animate-spin');
+        text.innerText = "기기에서 사진 선택"; lucide.createIcons(); input.value = '';
+        alert('사진을 올리기 전에 공사 건명을 먼저 입력해주세요. 입력한 공사명으로 Google Drive 폴더가 1개 생성됩니다.');
+        document.getElementById('album-title').focus();
+        return;
+      }
 
       text.innerText = `사진 저장 중... (0/${uniqueFiles.length})`;
 
@@ -1486,7 +1517,8 @@
         (completed, total) => { text.innerText = `사진 저장 중... (${completed}/${total})`; }
       );
 
-      results.forEach(({ url, key }) => {
+      results.forEach(({ url, key, folderId }) => {
+        if (folderId) currentAlbumDriveFolderId = folderId;
         if (url && !currentAlbumPhotos.includes(url)) currentAlbumPhotos.push(url);
         if (!url) {
           const i = currentAlbumFileKeys.indexOf(key);
@@ -1518,10 +1550,11 @@
 
     function handleProjectAlbumSubmit(e) {
       e.preventDefault();
-      const newAlbum = { id: String(Date.now()), title: document.getElementById('album-title').value.trim(), category: document.getElementById('album-category').value, date: document.getElementById('album-date').value, desc: document.getElementById('album-desc').value.trim(), photos: [...currentAlbumPhotos] };
+      const newAlbum = { id: String(Date.now()), title: document.getElementById('album-title').value.trim(), category: document.getElementById('album-category').value, date: document.getElementById('album-date').value, desc: document.getElementById('album-desc').value.trim(), photos: [...currentAlbumPhotos], driveFolderId: currentAlbumDriveFolderId || projectDriveFolderIds.get(document.getElementById('album-title').value.trim()) || "" };
       appData.projectAlbums.unshift(newAlbum); 
       currentAlbumPhotos = [];
       currentAlbumFileKeys = [];
+      currentAlbumDriveFolderId = "";
       document.getElementById('project-album-modal').classList.add('hidden');
       renderGallery(); renderManagerAlbumList(); triggerAutoSync(); 
     }
@@ -1529,6 +1562,7 @@
     let activeEditAlbumId = null, stagedExistingPhotos = [], editNewPhotos = [], editNewFileKeys = [];
     function openEditAlbumModal(id) {
       activeEditAlbumId = String(id); const album = appData.projectAlbums.find(a => a.id === activeEditAlbumId); if (!album) return;
+      if (album.driveFolderId) projectDriveFolderIds.set(album.title, album.driveFolderId);
       document.getElementById('edit-modal-title').innerText = `[공사명] ${album.title}`; stagedExistingPhotos = album.photos ? [...album.photos] : []; editNewPhotos = []; editNewFileKeys = [];
       renderEditAlbumGrid(); document.getElementById('edit-album-modal').classList.remove('hidden');
     }
@@ -1577,7 +1611,11 @@
         (completed, total) => { text.innerText = `사진 추가 중... (${completed}/${total})`; }
       );
 
-      results.forEach(({ url, key }) => {
+      results.forEach(({ url, key, folderId }) => {
+        if (folderId && album) {
+          album.driveFolderId = folderId;
+          projectDriveFolderIds.set(album.title, folderId);
+        }
         if (url && !editNewPhotos.includes(url)) editNewPhotos.push(url);
         if (!url) {
           const i = editNewFileKeys.indexOf(key);
@@ -1897,15 +1935,25 @@
       } 
     }
 
-    function deleteProjectAlbum(id) { 
-      if(confirm('앨범을 정말 삭제하시겠습니까? (등록된 사진들이 구글 드라이브에서 일괄 삭제됩니다)')) { 
-        const album = appData.projectAlbums.find(a => a.id === String(id));
-        if(album && album.photos) {
-            album.photos.forEach(url => deleteFileFromDrive(url));
-        }
-        appData.projectAlbums = appData.projectAlbums.filter(a => a.id !== String(id)); 
-        renderGallery(); renderManagerAlbumList(); triggerAutoSync(); 
-      } 
+    async function deleteProjectAlbum(id) { 
+      const album = appData.projectAlbums.find(a => a.id === String(id));
+      if (!album) return;
+
+      const ok = confirm(`앨범 [${album.title}]을 전체 삭제하시겠습니까?\n\nGoogle Drive의 해당 공사 폴더와 폴더 안 사진도 함께 삭제(휴지통 이동)됩니다.`);
+      if (!ok) return;
+
+      const result = await deleteProjectFolderFromDrive(album.driveFolderId || "", album.title || "");
+      if (!result || result.status !== "success") {
+        alert('Google Drive 폴더 삭제에 실패했습니다.\n' + ((result && result.error) ? result.error : 'Apps Script가 최신 버전으로 배포되었는지 확인해주세요.'));
+        return;
+      }
+
+      // Drive 폴더 삭제 성공 후에만 홈페이지 앨범 목록에서도 제거합니다.
+      projectDriveFolderIds.delete(album.title);
+      appData.projectAlbums = appData.projectAlbums.filter(a => a.id !== String(id)); 
+      renderGallery(); renderManagerAlbumList();
+      await triggerAutoSync();
+      alert(`앨범 [${album.title}]과 Google Drive 공사 폴더가 삭제되었습니다.`);
     }
 
     function deleteTaxInvoice(id) { 
