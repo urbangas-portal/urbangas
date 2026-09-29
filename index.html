@@ -928,9 +928,11 @@
       }
     }
 
-    // 사진 중복 업로드 방지용: 같은 파일/같은 폴더의 동시 업로드 요청은 1회만 실행
+    // 사진 업로드 상태 관리
+    // - 같은 파일의 중복 업로드 방지
+    // - 공사명별 Google Drive 폴더 ID를 기억하여 동일 폴더만 재사용
     const activePhotoUploads = new Map();
-    let photoUploadSequence = 0;
+    const projectDriveFolderIds = new Map();
 
     function getPhotoFileKey(file) {
       if (!file) return '';
@@ -952,43 +954,172 @@
       return results;
     }
 
-    async function uploadImageToDrive(fileOrBlob, folderName = "") {
+    async function compressPhotoForWeb(fileOrBlob) {
+      // 메인페이지 표시와 업로드 속도를 위해 웹용 사진 1개로 축소합니다.
+      // 원본 파일은 Drive에 따로 저장하지 않습니다.
+      const MAX_DIMENSION = 1600;
+      const JPEG_QUALITY = 0.80;
+
+      // 이미지가 아닌 파일은 변환하지 않습니다.
+      if (!fileOrBlob || !(fileOrBlob.type || '').startsWith('image/')) {
+        return {
+          blob: fileOrBlob,
+          fileName: fileOrBlob?.name || `file_${Date.now()}`,
+          contentType: fileOrBlob?.type || 'application/octet-stream',
+          sourceSize: fileOrBlob?.size || 0,
+          width: 0,
+          height: 0
+        };
+      }
+
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            try {
+              let width = img.naturalWidth || img.width;
+              let height = img.naturalHeight || img.height;
+              const scale = Math.min(1, MAX_DIMENSION / Math.max(width, height));
+              const targetWidth = Math.max(1, Math.round(width * scale));
+              const targetHeight = Math.max(1, Math.round(height * scale));
+
+              const canvas = document.createElement('canvas');
+              canvas.width = targetWidth;
+              canvas.height = targetHeight;
+              const ctx = canvas.getContext('2d', { alpha: false });
+              ctx.fillStyle = '#ffffff';
+              ctx.fillRect(0, 0, targetWidth, targetHeight);
+              ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+
+              canvas.toBlob((blob) => {
+                if (!blob) {
+                  resolve({
+                    blob: fileOrBlob,
+                    fileName: fileOrBlob.name || `photo_${Date.now()}`,
+                    contentType: fileOrBlob.type || 'image/jpeg',
+                    sourceSize: fileOrBlob.size || 0,
+                    width,
+                    height
+                  });
+                  return;
+                }
+
+                const originalName = fileOrBlob.name || `photo_${Date.now()}`;
+                const baseName = originalName.replace(/\.[^.]+$/, '') || `photo_${Date.now()}`;
+                resolve({
+                  blob,
+                  fileName: `${baseName}.jpg`,
+                  contentType: 'image/jpeg',
+                  sourceSize: fileOrBlob.size || 0,
+                  width: targetWidth,
+                  height: targetHeight
+                });
+              }, 'image/jpeg', JPEG_QUALITY);
+            } catch (err) {
+              console.error('사진 축소 실패, 원본 업로드로 전환:', err);
+              resolve({
+                blob: fileOrBlob,
+                fileName: fileOrBlob.name || `photo_${Date.now()}`,
+                contentType: fileOrBlob.type || 'image/jpeg',
+                sourceSize: fileOrBlob.size || 0,
+                width: 0,
+                height: 0
+              });
+            }
+          };
+          img.onerror = () => {
+            // 브라우저가 읽지 못하는 형식은 원본으로 보내되 서버에서 1개만 저장합니다.
+            resolve({
+              blob: fileOrBlob,
+              fileName: fileOrBlob.name || `photo_${Date.now()}`,
+              contentType: fileOrBlob.type || 'application/octet-stream',
+              sourceSize: fileOrBlob.size || 0,
+              width: 0,
+              height: 0
+            });
+          };
+          img.src = e.target.result;
+        };
+        reader.onerror = () => resolve({
+          blob: fileOrBlob,
+          fileName: fileOrBlob.name || `photo_${Date.now()}`,
+          contentType: fileOrBlob.type || 'application/octet-stream',
+          sourceSize: fileOrBlob.size || 0,
+          width: 0,
+          height: 0
+        });
+        reader.readAsDataURL(fileOrBlob);
+      });
+    }
+
+    async function uploadImageToDrive(fileOrBlob, folderName = "", preferredFolderId = "") {
       const fileKey = getPhotoFileKey(fileOrBlob);
-      const uploadKey = `${folderName}::${fileKey}`;
+      const knownFolderId = preferredFolderId || projectDriveFolderIds.get(folderName) || "";
+      const uploadKey = `${folderName}::${knownFolderId}::${fileKey}`;
       if (activePhotoUploads.has(uploadKey)) return activePhotoUploads.get(uploadKey);
 
-      const uploadPromise = new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-          const dataUrl = e.target.result;
-          const rawBase64 = String(dataUrl).split(',')[1];
+      const uploadPromise = (async () => {
+        const prepared = await compressPhotoForWeb(fileOrBlob);
+        const uploadBlob = prepared.blob;
 
-          // 선택한 원본 파일을 그대로 업로드합니다.
-          // 별도의 1024px 축소 JPEG 파일을 만들지 않습니다.
-          if (GOOGLE_SCRIPT_URL && !GOOGLE_SCRIPT_URL.includes("여기에")) {
-            try {
-              const res = await fetch(GOOGLE_SCRIPT_URL, {
-                method: "POST",
-                body: JSON.stringify({
-                  action: "uploadImage",
-                  fileName: fileOrBlob.name || `photo_${Date.now()}`,
-                  contentType: fileOrBlob.type || "application/octet-stream",
-                  base64Data: rawBase64,
-                  folderName,
-                  clientFileKey: fileKey
-                })
-              });
-              const resJson = await res.json();
-              if (resJson.status === "success") { resolve(resJson.url); return; }
-            } catch (err) {}
+        const dataUrl = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(String(e.target.result || ''));
+          reader.onerror = () => resolve('');
+          reader.readAsDataURL(uploadBlob);
+        });
+
+        if (!dataUrl) {
+          return { url: null, folderId: knownFolderId || "", fileId: "" };
+        }
+
+        const rawBase64 = dataUrl.split(',')[1];
+
+        if (GOOGLE_SCRIPT_URL && !GOOGLE_SCRIPT_URL.includes("여기에")) {
+          try {
+            const payload = {
+              action: "uploadImage",
+              fileName: prepared.fileName,
+              contentType: prepared.contentType,
+              base64Data: rawBase64,
+              folderName: folderName,
+              folderId: knownFolderId,
+              reuseExistingFolder: true,
+              clientFileKey: fileKey,
+              uploadSize: uploadBlob.size || 0,
+              sourceOriginalSize: prepared.sourceSize || 0,
+              imageWidth: prepared.width || 0,
+              imageHeight: prepared.height || 0,
+              webOptimized: true
+            };
+
+            const res = await fetch(GOOGLE_SCRIPT_URL, {
+              method: "POST",
+              body: JSON.stringify(payload)
+            });
+            const resJson = await res.json();
+            if (resJson && resJson.status === "success") {
+              if (resJson.folderId) projectDriveFolderIds.set(folderName, resJson.folderId);
+              return {
+                // 서버가 제공하는 웹 표시 URL을 우선 사용합니다.
+                url: resJson.displayUrl || resJson.url || "",
+                folderId: resJson.folderId || knownFolderId || "",
+                fileId: resJson.fileId || "",
+                reused: !!resJson.reused,
+                sourceOriginalSize: prepared.sourceSize || 0,
+                uploadedSize: Number(resJson.size || uploadBlob.size || 0)
+              };
+            }
+            console.error('Google Drive 사진 업로드 오류:', resJson);
+          } catch (err) {
+            console.error('Google Drive 웹용사진 업로드 실패:', err);
           }
+        }
 
-          // 서버 업로드가 불가능한 경우에만 브라우저 데이터 URL을 사용합니다.
-          resolve(dataUrl);
-        };
-        reader.onerror = () => resolve(null);
-        reader.readAsDataURL(fileOrBlob);
-      }).finally(() => {
+        // 서버 업로드 실패 시에만 현재 브라우저에서 미리보기로 사용합니다.
+        return { url: dataUrl, folderId: knownFolderId || "", fileId: "", localOnly: true };
+      })().finally(() => {
         activePhotoUploads.delete(uploadKey);
       });
 
@@ -996,31 +1127,55 @@
       return uploadPromise;
     }
 
-    // 새 공사명의 첫 사진은 먼저 1장만 저장해 폴더가 완전히 생성되도록 한 뒤,
-    // 나머지 사진을 병렬 저장합니다. 동시에 폴더 생성 요청이 들어가
-    // "공사명(1)", "공사명(2)"가 생기는 현상을 방지합니다.
+    // 공사명 폴더를 먼저 서버에서 정확히 1개 확보한 후, 모든 사진을 그 folderId로만 저장합니다.
+    async function ensureProjectDriveFolder(folderName) {
+      const cached = projectDriveFolderIds.get(folderName) || "";
+      if (cached) return cached;
+      if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("여기에")) return "";
+
+      try {
+        const res = await fetch(GOOGLE_SCRIPT_URL, {
+          method: "POST",
+          body: JSON.stringify({ action: "getOrCreateFolder", folderName })
+        });
+        const data = await res.json();
+        if (data && data.status === "success" && data.folderId) {
+          projectDriveFolderIds.set(folderName, data.folderId);
+          return data.folderId;
+        }
+      } catch (err) {
+        console.error("공사 폴더 준비 실패:", err);
+      }
+      return "";
+    }
+
     async function uploadPhotosToSingleProjectFolder(items, folderName, onProgress) {
       if (!items || items.length === 0) return [];
       const results = new Array(items.length);
       let completed = 0;
 
-      const uploadOne = async (item, index) => {
-        const url = await uploadImageToDrive(item.file, folderName);
-        completed++;
-        if (onProgress) onProgress(completed, items.length);
-        results[index] = { url, key: item.key };
-      };
-
-      // 첫 번째 사진 저장이 끝나야 같은 이름의 폴더가 확실히 존재합니다.
-      await uploadOne(items[0], 0);
-
-      // 폴더가 생성된 이후에는 나머지를 최대 3장씩 병렬 처리해 속도를 유지합니다.
-      if (items.length > 1) {
-        const rest = items.slice(1).map((item, offset) => ({ item, index: offset + 1 }));
-        await runWithConcurrency(rest, 3, async ({ item, index }) => {
-          await uploadOne(item, index);
-        });
+      const folderId = await ensureProjectDriveFolder(folderName);
+      if (!folderId) {
+        alert("Google Drive 공사 폴더를 준비하지 못했습니다. Apps Script를 최신 버전으로 재배포했는지 확인해주세요.");
+        return results;
       }
+
+      await runWithConcurrency(
+        items.map((item, index) => ({ item, index })),
+        3,
+        async ({ item, index }) => {
+          const response = await uploadImageToDrive(item.file, folderName, folderId);
+          completed++;
+          if (response && response.folderId) projectDriveFolderIds.set(folderName, response.folderId);
+          if (onProgress) onProgress(completed, items.length);
+          results[index] = {
+            url: response ? response.url : null,
+            key: item.key,
+            folderId: response ? response.folderId : folderId
+          };
+        }
+      );
+
       return results;
     }
 
@@ -1057,7 +1212,8 @@
       try {
         let imageFile = file;
         if (file.type === "application/pdf" || file.name.toLowerCase().endsWith('.pdf')) { imageFile = await convertPdfToImage(file); }
-        const url = await uploadImageToDrive(imageFile, targetFolder); 
+        const uploadRes = await uploadImageToDrive(imageFile, targetFolder);
+        const url = uploadRes && uploadRes.url ? uploadRes.url : null;
         
         if (proj && url) { proj[docType] = url; renderDocumentPreviews(); triggerAutoSync(); }
         else { renderDocumentPreviews(); }
@@ -1081,7 +1237,8 @@
         try {
           let imageFile = file;
           if (file.type === "application/pdf" || file.name.toLowerCase().endsWith('.pdf')) imageFile = await convertPdfToImage(file);
-          const url = await uploadImageToDrive(imageFile, targetFolder);
+          const uploadRes = await uploadImageToDrive(imageFile, targetFolder);
+          const url = uploadRes && uploadRes.url ? uploadRes.url : null;
           completed++;
           const pText = document.getElementById('multi-doc-progress');
           if (pText) pText.innerText = `계약서 빠른 저장 중... (${completed}/${files.length})`;
@@ -1098,13 +1255,20 @@
 
     function getDisplayUrl(url) {
       if (!url) return NO_IMAGE_PLACEHOLDER;
-      if (url.includes('drive.google.com/uc') || url.includes('export=view')) {
-        const match = url.match(/id=([a-zA-Z0-9_-]+)/);
-        if (match && match[1]) {
-          return "https://drive.google.com/thumbnail?id=" + match[1] + "&sz=w1200";
-        }
+      if (String(url).startsWith('data:image/')) return url;
+
+      const value = String(url);
+      let fileId = '';
+      let match = value.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+      if (match && match[1]) fileId = match[1];
+      if (!fileId) {
+        match = value.match(/\/d\/([a-zA-Z0-9_-]+)/);
+        if (match && match[1]) fileId = match[1];
       }
-      return url;
+      if (fileId) {
+        return `https://drive.google.com/thumbnail?id=${fileId}&sz=w1600`;
+      }
+      return value;
     }
 
     function renderDocumentPreviews() {
