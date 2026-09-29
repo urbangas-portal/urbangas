@@ -851,6 +851,7 @@
     // 💡 [필수] 구글 앱스 스크립트 웹 앱 URL을 아래 따옴표 안에 넣으세요!
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw6cPLtRQhYMGtjpLuKnpB6Z_tmUuZO2WA9lIZ9FJHHfiBzmuTxgU4gd6RjrHZvERdX/exec";
 
+
     async function deleteFileFromDrive(url) {
       if (!url || !GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("여기에")) return;
       try {
@@ -1311,23 +1312,126 @@
       renderDocumentPreviews(); triggerAutoSync(); input.value = '';
     }
 
+    const driveDisplayUrlCache = new Map();
+
+    function extractDriveFileId(url) {
+      if (!url) return '';
+      const value = String(url);
+      let match = value.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+      if (match && match[1]) return match[1];
+      match = value.match(/\/d\/([a-zA-Z0-9_-]+)/);
+      if (match && match[1]) return match[1];
+      match = value.match(/googleusercontent\.com\/d\/([a-zA-Z0-9_-]+)/);
+      if (match && match[1]) return match[1];
+      return '';
+    }
+
+    function extractDriveResourceKey(url) {
+      if (!url) return '';
+      const value = String(url);
+      const match = value.match(/[?&]resourcekey=([^&#]+)/i);
+      return match && match[1] ? decodeURIComponent(match[1]) : '';
+    }
+
+    function buildDriveThumbnailUrl(fileId, resourceKey = '') {
+      if (!fileId) return NO_IMAGE_PLACEHOLDER;
+      let url = `https://drive.google.com/thumbnail?id=${encodeURIComponent(fileId)}&sz=w1600`;
+      if (resourceKey) url += `&resourcekey=${encodeURIComponent(resourceKey)}`;
+      return url;
+    }
+
+    function buildDriveDirectUrl(fileId, resourceKey = '') {
+      if (!fileId) return NO_IMAGE_PLACEHOLDER;
+      let url = `https://drive.google.com/uc?export=view&id=${encodeURIComponent(fileId)}`;
+      if (resourceKey) url += `&resourcekey=${encodeURIComponent(resourceKey)}`;
+      return url;
+    }
+
     function getDisplayUrl(url) {
       if (!url) return NO_IMAGE_PLACEHOLDER;
       if (String(url).startsWith('data:image/')) return url;
-
       const value = String(url);
-      let fileId = '';
-      let match = value.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-      if (match && match[1]) fileId = match[1];
-      if (!fileId) {
-        match = value.match(/\/d\/([a-zA-Z0-9_-]+)/);
-        if (match && match[1]) fileId = match[1];
-      }
+      const fileId = extractDriveFileId(value);
+      const resourceKey = extractDriveResourceKey(value);
       if (fileId) {
-        return `https://drive.google.com/thumbnail?id=${fileId}&sz=w1600`;
+        if (driveDisplayUrlCache.has(fileId)) return driveDisplayUrlCache.get(fileId);
+        // resource key가 있으면 Drive thumbnail 주소에 반드시 포함합니다.
+        if (resourceKey) return buildDriveThumbnailUrl(fileId, resourceKey);
+        // resource key가 없는 기존 사진은 우선 googleusercontent 주소로 표시를 시도합니다.
+        return `https://lh3.googleusercontent.com/d/${fileId}=w1600`;
       }
       return value;
     }
+
+    async function resolveDriveDisplayUrlFromServer(fileId) {
+      if (!fileId || !GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes('여기에')) return '';
+      if (driveDisplayUrlCache.has(fileId)) return driveDisplayUrlCache.get(fileId);
+      try {
+        const res = await fetch(GOOGLE_SCRIPT_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'getFileDisplayUrl', fileId })
+        });
+        const data = await res.json();
+        if (data && data.status === 'success' && data.displayUrl) {
+          driveDisplayUrlCache.set(fileId, data.displayUrl);
+          return data.displayUrl;
+        }
+      } catch (err) {
+        console.warn('Drive 표시주소 확인 실패:', err);
+      }
+      return '';
+    }
+
+    async function handleDriveImageError(img) {
+      if (!img || img.dataset.driveFallbackDone === '1' || img.dataset.driveResolving === '1') return;
+      const original = img.dataset.originalDriveUrl || img.getAttribute('src') || '';
+      const fileId = extractDriveFileId(original) || extractDriveFileId(img.src);
+      const resourceKey = extractDriveResourceKey(original) || extractDriveResourceKey(img.src);
+      if (!fileId) {
+        img.dataset.driveFallbackDone = '1';
+        return;
+      }
+
+      const step = Number(img.dataset.driveFallbackStep || 0);
+      img.dataset.originalDriveUrl = original;
+
+      if (step === 0) {
+        // 서버에서 실제 resource key까지 포함한 최신 표시 URL을 다시 조회합니다.
+        img.dataset.driveResolving = '1';
+        const resolved = await resolveDriveDisplayUrlFromServer(fileId);
+        img.dataset.driveResolving = '0';
+        img.dataset.driveFallbackStep = '1';
+        if (resolved && resolved !== img.src) {
+          img.src = resolved;
+          return;
+        }
+      }
+
+      if (step <= 1) {
+        img.dataset.driveFallbackStep = '2';
+        img.src = buildDriveThumbnailUrl(fileId, resourceKey);
+        return;
+      }
+      if (step === 2) {
+        img.dataset.driveFallbackStep = '3';
+        img.src = `https://lh3.googleusercontent.com/d/${fileId}=w1600`;
+        return;
+      }
+      if (step === 3) {
+        img.dataset.driveFallbackStep = '4';
+        img.src = buildDriveDirectUrl(fileId, resourceKey);
+        return;
+      }
+
+      img.dataset.driveFallbackDone = '1';
+      img.src = NO_IMAGE_PLACEHOLDER;
+    }
+
+    // 동적으로 생성되는 메인 갤러리, 앨범관리, 확대보기 이미지에 모두 적용됩니다.
+    document.addEventListener('error', (event) => {
+      const target = event.target;
+      if (target && target.tagName === 'IMG') handleDriveImageError(target);
+    }, true);
 
     function renderDocumentPreviews() {
       const proj = appData.projects.find(p => p.id === activeDetailProjectId); if (!proj) return;
