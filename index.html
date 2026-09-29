@@ -851,7 +851,6 @@
     // 💡 [필수] 구글 앱스 스크립트 웹 앱 URL을 아래 따옴표 안에 넣으세요!
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw6cPLtRQhYMGtjpLuKnpB6Z_tmUuZO2WA9lIZ9FJHHfiBzmuTxgU4gd6RjrHZvERdX/exec";
 
-
     async function deleteFileFromDrive(url) {
       if (!url || !GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("여기에")) return;
       try {
@@ -1313,6 +1312,8 @@
     }
 
     const driveDisplayUrlCache = new Map();
+    const driveImageDataCache = new Map();
+    const driveImageDataPromises = new Map();
 
     function extractDriveFileId(url) {
       if (!url) return '';
@@ -1382,44 +1383,99 @@
       return '';
     }
 
-    async function handleDriveImageError(img) {
-      if (!img || img.dataset.driveFallbackDone === '1' || img.dataset.driveResolving === '1') return;
+    // Drive 공개 링크가 브라우저에서 막히는 경우를 완전히 피하기 위해
+    // Apps Script가 파일을 읽어 base64 이미지 데이터로 전달합니다.
+    async function resolveDriveImageDataFromServer(fileId) {
+      if (!fileId || !GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes('여기에')) return '';
+      if (driveImageDataCache.has(fileId)) return driveImageDataCache.get(fileId);
+      if (driveImageDataPromises.has(fileId)) return driveImageDataPromises.get(fileId);
+
+      const promise = (async () => {
+        try {
+          const res = await fetch(GOOGLE_SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'getImageData', fileId })
+          });
+          const data = await res.json();
+          if (data && data.status === 'success' && data.base64Data) {
+            const mimeType = data.mimeType || 'image/jpeg';
+            const dataUrl = `data:${mimeType};base64,${data.base64Data}`;
+            driveImageDataCache.set(fileId, dataUrl);
+            return dataUrl;
+          }
+          console.warn('Drive 이미지 데이터 응답 오류:', data);
+        } catch (err) {
+          console.warn('Drive 이미지 데이터 로드 실패:', err);
+        }
+        return '';
+      })().finally(() => driveImageDataPromises.delete(fileId));
+
+      driveImageDataPromises.set(fileId, promise);
+      return promise;
+    }
+
+    async function loadDriveImageThroughScript(img) {
+      if (!img || img.dataset.driveProxyLoaded === '1' || img.dataset.driveProxyLoading === '1') return;
       const original = img.dataset.originalDriveUrl || img.getAttribute('src') || '';
-      const fileId = extractDriveFileId(original) || extractDriveFileId(img.src);
-      const resourceKey = extractDriveResourceKey(original) || extractDriveResourceKey(img.src);
+      const fileId = img.dataset.driveFileId || extractDriveFileId(original);
+      if (!fileId) return;
+
+      img.dataset.originalDriveUrl = original;
+      img.dataset.driveFileId = fileId;
+      img.dataset.driveProxyLoading = '1';
+
+      const dataUrl = await resolveDriveImageDataFromServer(fileId);
+      img.dataset.driveProxyLoading = '0';
+      if (dataUrl) {
+        img.dataset.driveProxyLoaded = '1';
+        img.src = dataUrl;
+      }
+    }
+
+    // 화면에 가까워진 사진만 Apps Script를 통해 가져와 속도와 안정성을 같이 확보합니다.
+    const driveImageObserver = ('IntersectionObserver' in window)
+      ? new IntersectionObserver((entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            driveImageObserver.unobserve(entry.target);
+            loadDriveImageThroughScript(entry.target);
+          });
+        }, { rootMargin: '250px 0px' })
+      : null;
+
+    function prepareDriveImages(root = document) {
+      const images = [];
+      if (root && root.tagName === 'IMG') images.push(root);
+      if (root && root.querySelectorAll) images.push(...root.querySelectorAll('img'));
+
+      images.forEach((img) => {
+        if (!img || img.dataset.drivePrepared === '1') return;
+        const src = img.getAttribute('src') || '';
+        const fileId = extractDriveFileId(src);
+        if (!fileId) return;
+
+        img.dataset.drivePrepared = '1';
+        img.dataset.originalDriveUrl = src;
+        img.dataset.driveFileId = fileId;
+        if (driveImageObserver) driveImageObserver.observe(img);
+        else loadDriveImageThroughScript(img);
+      });
+    }
+
+    async function handleDriveImageError(img) {
+      if (!img || img.dataset.driveFallbackDone === '1') return;
+      const original = img.dataset.originalDriveUrl || img.getAttribute('src') || '';
+      const fileId = img.dataset.driveFileId || extractDriveFileId(original) || extractDriveFileId(img.src);
       if (!fileId) {
         img.dataset.driveFallbackDone = '1';
         return;
       }
 
-      const step = Number(img.dataset.driveFallbackStep || 0);
-      img.dataset.originalDriveUrl = original;
-
-      if (step === 0) {
-        // 서버에서 실제 resource key까지 포함한 최신 표시 URL을 다시 조회합니다.
-        img.dataset.driveResolving = '1';
-        const resolved = await resolveDriveDisplayUrlFromServer(fileId);
-        img.dataset.driveResolving = '0';
-        img.dataset.driveFallbackStep = '1';
-        if (resolved && resolved !== img.src) {
-          img.src = resolved;
-          return;
-        }
-      }
-
-      if (step <= 1) {
-        img.dataset.driveFallbackStep = '2';
-        img.src = buildDriveThumbnailUrl(fileId, resourceKey);
-        return;
-      }
-      if (step === 2) {
-        img.dataset.driveFallbackStep = '3';
-        img.src = `https://lh3.googleusercontent.com/d/${fileId}=w1600`;
-        return;
-      }
-      if (step === 3) {
-        img.dataset.driveFallbackStep = '4';
-        img.src = buildDriveDirectUrl(fileId, resourceKey);
+      // 외부 Drive 이미지 URL이 실패하면 즉시 Apps Script 프록시 방식으로 전환합니다.
+      const dataUrl = await resolveDriveImageDataFromServer(fileId);
+      if (dataUrl) {
+        img.dataset.driveProxyLoaded = '1';
+        img.src = dataUrl;
         return;
       }
 
@@ -1427,11 +1483,24 @@
       img.src = NO_IMAGE_PLACEHOLDER;
     }
 
-    // 동적으로 생성되는 메인 갤러리, 앨범관리, 확대보기 이미지에 모두 적용됩니다.
     document.addEventListener('error', (event) => {
       const target = event.target;
       if (target && target.tagName === 'IMG') handleDriveImageError(target);
     }, true);
+
+    // 메인 갤러리/앨범관리/편집창 등 동적으로 생성되는 모든 Drive 사진을 자동 감지합니다.
+    const driveDomObserver = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+          if (node && node.nodeType === 1) prepareDriveImages(node);
+        });
+      });
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+      prepareDriveImages(document);
+      if (document.body) driveDomObserver.observe(document.body, { childList: true, subtree: true });
+    });
 
     function renderDocumentPreviews() {
       const proj = appData.projects.find(p => p.id === activeDetailProjectId); if (!proj) return;
