@@ -845,12 +845,12 @@
        JavaScript 핵심 로직 영역
        ============================================== -->
   <script>
-    let SECRET_PIN = localStorage.getItem('gwangjin_custom_pin') || "1270";
+    // 관리자 비밀번호는 브라우저에 저장하지 않고 Google Drive(Apps Script)에서 검증합니다.
     const NO_IMAGE_PLACEHOLDER = "data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22600%22%20height%3D%22400%22%3E%3Crect%20fill%3D%22%23f1f5f9%22%20width%3D%22600%22%20height%3D%22400%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20text-anchor%3D%22middle%22%20font-size%3D%2218%22%20font-weight%3D%22bold%22%20fill%3D%22%23cbd5e1%22%3E%EB%93%B1%EB%A1%9D%EB%90%9C%20%EC%82%AC%EC%A7%84%20%EC%97%86%EC%9D%8C%3C%2Ftext%3E%3C%2Fsvg%3E";
 
     // 💡 [필수] 구글 앱스 스크립트 웹 앱 URL을 아래 따옴표 안에 넣으세요!
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw6cPLtRQhYMGtjpLuKnpB6Z_tmUuZO2WA9lIZ9FJHHfiBzmuTxgU4gd6RjrHZvERdX/exec";
-    const EXPECTED_API_VERSION = "2026-10-04-v3";
+    const EXPECTED_API_VERSION = "2026-10-04-v4-auth";
 
     async function deleteFileFromDrive(url) {
       if (!url || !GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("여기에")) return;
@@ -1028,7 +1028,7 @@
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           if (data && data.status === 'error') throw new Error(data.error || 'Apps Script 처리 오류');
           if (data && data.apiVersion) updateBackendStatus(data.apiVersion);
-          const criticalActions = ['uploadImage', 'deleteProjectFolder', 'getImageData', 'syncData'];
+          const criticalActions = ['uploadImage', 'deleteProjectFolder', 'getImageData', 'syncData', 'verifyPin', 'changePin'];
           if (criticalActions.includes(String(payload.action || '')) && data.apiVersion !== EXPECTED_API_VERSION) {
             throw new Error(`Apps Script 버전이 맞지 않습니다. 현재: ${data.apiVersion || '구버전'} / 필요: ${EXPECTED_API_VERSION}. 배포 관리에서 기존 웹앱을 새 버전으로 업데이트해주세요.`);
           }
@@ -1589,16 +1589,44 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
+      try { localStorage.removeItem('gwangjin_custom_pin'); } catch (_) {}
       lucide.createIcons(); filterGallery('전체'); renderProjects(); renderTaxInvoiceList(); renderScheduleCalendar(); renderScheduleMembers(); checkBackendVersion(); fetchDriveData(false); 
     });
 
     function openPasswordModal() { document.getElementById('password-modal').classList.remove('hidden'); document.getElementById('password-error').classList.add('hidden'); }
     function closePasswordModal() { document.getElementById('password-modal').classList.add('hidden'); }
-    function verifyPassword() {
-      if (document.getElementById('manager-password-input').value === SECRET_PIN) {
-        closePasswordModal(); document.getElementById('view-public').classList.add('hidden'); document.getElementById('view-manager').classList.remove('hidden');
-        fetchDriveData(false); renderManagerAlbumList(); renderProjects(); renderTaxInvoiceList(); renderScheduleCalendar(); renderScheduleMembers(); window.scrollTo({ top: 0, behavior: 'smooth' });
-      } else { document.getElementById('password-error').classList.remove('hidden'); }
+    async function verifyPassword() {
+      const input = document.getElementById('manager-password-input');
+      const errorEl = document.getElementById('password-error');
+      const pin = (input.value || '').trim();
+      errorEl.classList.add('hidden');
+      if (!pin) { errorEl.innerText = '비밀번호를 입력해주세요.'; errorEl.classList.remove('hidden'); return; }
+
+      try {
+        input.disabled = true;
+        const result = await postToGoogleScript({ action: 'verifyPin', pin }, { attempts: 2, timeoutMs: 25000 });
+        if (result && result.status === 'success' && result.verified === true) {
+          // 과거 브라우저 저장 비밀번호가 남아 있다면 제거합니다.
+          try { localStorage.removeItem('gwangjin_custom_pin'); } catch (_) {}
+          input.value = '';
+          closePasswordModal();
+          document.getElementById('view-public').classList.add('hidden');
+          document.getElementById('view-manager').classList.remove('hidden');
+          await fetchDriveData(false);
+          renderManagerAlbumList(); renderProjects(); renderTaxInvoiceList(); renderScheduleCalendar(); renderScheduleMembers();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+          errorEl.innerText = '비밀번호가 틀렸습니다.';
+          errorEl.classList.remove('hidden');
+        }
+      } catch (err) {
+        errorEl.innerText = '비밀번호 확인 중 오류가 발생했습니다. Apps Script 재배포 상태를 확인해주세요.';
+        errorEl.classList.remove('hidden');
+        console.error('비밀번호 확인 실패:', err);
+      } finally {
+        input.disabled = false;
+        input.focus();
+      }
     }
     function logoutManagerMode() {
       document.getElementById('view-manager').classList.add('hidden'); document.getElementById('view-public').classList.remove('hidden');
@@ -1606,11 +1634,34 @@
     }
 
     function openChangePinModal() { document.getElementById('old-pin').value = ''; document.getElementById('new-pin').value = ''; document.getElementById('change-pin-modal').classList.remove('hidden'); }
-    function submitChangePin() {
-      const oldP = document.getElementById('old-pin').value; const newP = document.getElementById('new-pin').value;
-      if (oldP !== SECRET_PIN) { alert('기존 비밀번호가 일치하지 않습니다.'); return; }
+    async function submitChangePin() {
+      const oldInput = document.getElementById('old-pin');
+      const newInput = document.getElementById('new-pin');
+      const oldP = (oldInput.value || '').trim();
+      const newP = (newInput.value || '').trim();
+      if (!oldP) { alert('기존 비밀번호를 입력해주세요.'); return; }
       if (!newP || newP.length < 4) { alert('신규 비밀번호는 4자리 이상이어야 합니다.'); return; }
-      SECRET_PIN = newP; localStorage.setItem('gwangjin_custom_pin', SECRET_PIN); alert('비밀번호가 성공적으로 변경되었습니다!'); document.getElementById('change-pin-modal').classList.add('hidden');
+      if (oldP === newP) { alert('기존 비밀번호와 다른 비밀번호를 입력해주세요.'); return; }
+
+      try {
+        oldInput.disabled = true; newInput.disabled = true;
+        const result = await postToGoogleScript({ action: 'changePin', oldPin: oldP, newPin: newP }, { attempts: 2, timeoutMs: 30000 });
+        if (result && result.status === 'success' && result.changed === true) {
+          try { localStorage.removeItem('gwangjin_custom_pin'); } catch (_) {}
+          oldInput.value = ''; newInput.value = '';
+          document.getElementById('change-pin-modal').classList.add('hidden');
+          alert('관리자 비밀번호가 Google Drive에 안전하게 변경되었습니다. 다음 로그인부터 모든 기기에 동일하게 적용됩니다.');
+        } else {
+          alert('비밀번호를 변경하지 못했습니다.');
+        }
+      } catch (err) {
+        const msg = String(err && err.message ? err.message : err);
+        if (msg.includes('기존 비밀번호')) alert('기존 비밀번호가 일치하지 않습니다.');
+        else alert('비밀번호 변경 중 오류가 발생했습니다. Apps Script 재배포 상태를 확인해주세요.');
+        console.error('비밀번호 변경 실패:', err);
+      } finally {
+        oldInput.disabled = false; newInput.disabled = false;
+      }
     }
 
     function printProjectBoard() {
