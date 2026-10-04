@@ -911,11 +911,9 @@
     function normalizeAlbumsForStorage(albums) {
       return (albums || []).map(album => {
         const copy = { ...album };
-        // 사진별 base64 미리보기는 장부 JSON을 지나치게 크게 만들어 저장/불러오기 실패의 원인이 됩니다.
-        // 메인/앨범관리용 대표사진 미리보기 1장만 저장합니다.
-        if (!copy.coverPreview && Array.isArray(copy.photoPreviews) && copy.photoPreviews[0]) {
-          copy.coverPreview = copy.photoPreviews[0];
-        }
+        // 첫 번째 사진도 다른 사진과 동일한 실제 Drive 이미지를 사용합니다.
+        // 저해상도 base64 대표 미리보기는 저장하지 않아 첫 사진 화질 저하와 JSON 비대화를 방지합니다.
+        delete copy.coverPreview;
         delete copy.photoPreviews;
         return copy;
       });
@@ -944,7 +942,12 @@
           updateBackendStatus(data.apiVersion || '');
           appData = {
             ...data,
-            projectAlbums: (data.projectAlbums || []).map(a => ({ ...a, coverPreview: a.coverPreview || (Array.isArray(a.photoPreviews) ? (a.photoPreviews[0] || '') : '') })),
+            projectAlbums: (data.projectAlbums || []).map(a => {
+              const copy = { ...a };
+              delete copy.coverPreview;
+              delete copy.photoPreviews;
+              return copy;
+            }),
             taxInvoices: data.taxInvoices || [],
             scheduleMembers: Array.isArray(data.scheduleMembers) ? data.scheduleMembers : localScheduleMembers,
             scheduleEvents: Array.isArray(data.scheduleEvents) ? data.scheduleEvents : localScheduleEvents
@@ -952,7 +955,6 @@
           saveLocalCacheWithoutPhotoPreviews();
           filterGallery(currentFilter);
           renderProjects(); renderManagerAlbumList(); renderTaxInvoiceList(); renderScheduleCalendar(); renderScheduleMembers();
-          setTimeout(() => repairMissingAlbumCoverPreviews(), 200);
           if (showAlert) alert("구글 드라이브와 동기화 완료!");
         }
       } catch (err) {}
@@ -1712,8 +1714,10 @@
     function getAlbumPhotoPreview(album, index) {
       if (!album) return NO_IMAGE_PLACEHOLDER;
       const photos = album.photos || [];
-      if (index === 0 && album.coverPreview) return album.coverPreview;
-      return getDisplayUrl(photos[index] || '');
+      const photoUrl = photos[index] || '';
+      // 1번 사진도 2번 이후 사진과 똑같이 실제 Drive 사진을 표시합니다.
+      // 과거에 저장된 coverPreview(저해상도)는 화면 표시에서 사용하지 않습니다.
+      return photoUrl ? getDisplayUrl(photoUrl) : NO_IMAGE_PLACEHOLDER;
     }
 
     function renderGallery() {
@@ -1874,7 +1878,7 @@
 
     async function handleProjectAlbumSubmit(e) {
       e.preventDefault();
-      const newAlbum = { id: String(Date.now()), title: document.getElementById('album-title').value.trim(), category: document.getElementById('album-category').value, date: document.getElementById('album-date').value, desc: document.getElementById('album-desc').value.trim(), photos: [...currentAlbumPhotos], coverPreview: currentAlbumPreviews[0] || '', driveFolderId: currentAlbumDriveFolderId || projectDriveFolderIds.get(document.getElementById('album-title').value.trim()) || "" };
+      const newAlbum = { id: String(Date.now()), title: document.getElementById('album-title').value.trim(), category: document.getElementById('album-category').value, date: document.getElementById('album-date').value, desc: document.getElementById('album-desc').value.trim(), photos: [...currentAlbumPhotos], driveFolderId: currentAlbumDriveFolderId || projectDriveFolderIds.get(document.getElementById('album-title').value.trim()) || "" };
       appData.projectAlbums.unshift(newAlbum); 
       currentAlbumPhotos = [];
       currentAlbumPreviews = [];
@@ -1889,7 +1893,7 @@
     function openEditAlbumModal(id) {
       activeEditAlbumId = String(id); const album = appData.projectAlbums.find(a => a.id === activeEditAlbumId); if (!album) return;
       if (album.driveFolderId) projectDriveFolderIds.set(album.title, album.driveFolderId);
-      document.getElementById('edit-modal-title').innerText = `[공사명] ${album.title}`; stagedExistingPhotos = album.photos ? [...album.photos] : []; stagedExistingPreviews = stagedExistingPhotos.map((_, i) => i === 0 ? (album.coverPreview || '') : ''); editNewPhotos = []; editNewPreviews = []; editNewFileKeys = [];
+      document.getElementById('edit-modal-title').innerText = `[공사명] ${album.title}`; stagedExistingPhotos = album.photos ? [...album.photos] : []; stagedExistingPreviews = stagedExistingPhotos.map(() => ''); editNewPhotos = []; editNewPreviews = []; editNewFileKeys = [];
       renderEditAlbumGrid(); document.getElementById('edit-album-modal').classList.remove('hidden');
     }
     
@@ -1990,21 +1994,13 @@
     async function saveEditAlbumPhotos() {
       const album = appData.projectAlbums.find(a => a.id === activeEditAlbumId);
       if (album) {
-        const oldFirst = (album.photos || [])[0] || '';
         const deletedPhotos = (album.photos || []).filter(url => !stagedExistingPhotos.includes(url));
         deletedPhotos.forEach(url => deleteFileFromDrive(url));
 
         album.photos = [...stagedExistingPhotos, ...editNewPhotos];
-        const newFirst = album.photos[0] || '';
-        if (!newFirst) {
-          album.coverPreview = '';
-        } else if (newFirst === oldFirst && album.coverPreview) {
-          // 기존 대표사진 유지
-        } else {
-          const allPreviews = [...stagedExistingPreviews, ...editNewPreviews];
-          album.coverPreview = allPreviews[0] || '';
-          if (!album.coverPreview) await ensureAlbumCoverPreview(album);
-        }
+        // 첫 사진 전용 저해상도 대표 미리보기는 더 이상 사용하지 않습니다.
+        delete album.coverPreview;
+        delete album.photoPreviews;
 
         editNewPhotos = [];
         editNewPreviews = [];
@@ -2325,7 +2321,7 @@ Google Drive의 해당 공사 폴더, 폴더 안 사진 및 하위 폴더까지 
         document.getElementById(`tab-content-${tab}`).classList.toggle('hidden', tab !== t);
         document.getElementById(`tab-btn-${tab}`).className = t === tab ? "px-5 py-3 rounded-t-xl bg-white text-skybrand-600 border-t-2 border-skybrand-600 shadow-sm transition-all flex items-center gap-1.5" : "px-5 py-3 rounded-t-xl bg-slate-200 text-slate-600 hover:bg-slate-300 transition-all flex items-center gap-1.5";
       });
-      if(t==='photos') { renderManagerAlbumList(); setTimeout(() => repairMissingAlbumCoverPreviews(), 100); }
+      if(t==='photos') { renderManagerAlbumList(); }
       if(t==='project') renderProjects();
       if(t==='tax') renderTaxInvoiceList();
       if(t==='schedule') { renderScheduleCalendar(); renderScheduleMembers(); renderScheduleSearchMembers(); updateScheduleSearchMonthLabel(); }
