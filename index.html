@@ -36,31 +36,6 @@
     .vertical-scroll-box::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 9999px; }
     .vertical-scroll-box::-webkit-scrollbar-thumb { background: #bae6fd; border-radius: 9999px; }
 
-    /* 현장 공정 관리 보드 출력 전용 디자인 */
-    .board-print-subtitle { font-size: 11px; color: #64748b; margin-top: -8px; margin-bottom: 14px; }
-    .board-print-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 12px 0 18px; }
-    .board-print-summary-card { border: 1px solid #cbd5e1; border-radius: 10px; padding: 10px 12px; background: #f8fafc; }
-    .board-print-summary-card .label { display: block; font-size: 9px; font-weight: 700; color: #64748b; margin-bottom: 4px; }
-    .board-print-summary-card .value { display: block; font-size: 16px; font-weight: 900; color: #0f172a; }
-    .board-print-summary-card.balance { background: #fff1f2; border-color: #fecdd3; }
-    .board-print-summary-card.balance .value { color: #be123c; }
-    .board-print-section { margin-top: 18px; break-inside: avoid; }
-    .board-print-section-title { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-left: 4px solid #0284c7; background: #f0f9ff; font-size: 12px; font-weight: 900; color: #0f172a; margin-bottom: 7px; }
-    .board-print-section-title.completed { border-left-color: #64748b; background: #f8fafc; }
-    .board-print-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 9.5px; color: #1e293b; }
-    .board-print-table th { background: #e2e8f0; border: 1px solid #cbd5e1; padding: 7px 5px; font-weight: 800; text-align: center; }
-    .board-print-table td { border: 1px solid #dbe3ec; padding: 7px 5px; vertical-align: middle; }
-    .board-print-table tbody tr:nth-child(even) { background: #f8fafc; }
-    .board-print-table .num { text-align: center; width: 5%; }
-    .board-print-table .project { width: 27%; font-weight: 800; }
-    .board-print-table .client { width: 16%; }
-    .board-print-table .money { text-align: right; white-space: nowrap; }
-    .board-print-table .balance { text-align: right; white-space: nowrap; font-weight: 900; color: #be123c; background: #fff7f7; }
-    .board-print-table .status { text-align: center; font-weight: 800; white-space: nowrap; }
-    .board-print-table .done { color: #475569; }
-    .board-print-empty { padding: 16px; text-align: center; color: #94a3b8; border: 1px dashed #cbd5e1; border-radius: 8px; font-size: 10px; }
-    .board-print-footer { margin-top: 16px; padding-top: 8px; border-top: 1px solid #cbd5e1; text-align: right; font-size: 9px; color: #64748b; }
-
     @media print {
       @page { size: A4 portrait; margin: 12mm; }
       body * { visibility: hidden !important; }
@@ -1690,99 +1665,14 @@
     }
 
     function printProjectBoard() {
-      const modal = document.getElementById('print-table-modal');
-      const title = document.getElementById('print-table-title');
-      const content = document.getElementById('print-table-content');
-
-      const projects = Array.isArray(appData.projects) ? [...appData.projects] : [];
-      const ongoing = projects.filter(p => !p.isCompleted);
-      const completed = projects.filter(p => !!p.isCompleted);
-
-      const moneyInfo = (p) => {
-        const total = Number(p.totalAmount || 0) + Number(p.extraAmount || 0);
-        const deposit = Number(p.depositAmount || 0);
-        const rawBalance = total - deposit;
-        const outstanding = Math.max(0, rawBalance);
-        return { total, deposit, rawBalance, outstanding };
-      };
-
-      const outstandingTotal = ongoing.reduce((sum, p) => sum + moneyInfo(p).outstanding, 0);
-      const now = new Date();
-      const printedAt = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-
-      title.innerText = '광진유한회사 | 현장 공정 관리 보드';
-
-      const rowHtml = (p, idx, isCompleted) => {
-        const m = moneyInfo(p);
-        const yearTitle = `${p.year ? `[${p.year}] ` : ''}${p.title || '-'}`;
-        const balanceCell = isCompleted
-          ? `<td class="status done">정산완료</td>`
-          : `<td class="balance">${m.outstanding.toLocaleString()}원</td>`;
-        const statusCell = isCompleted
-          ? `<td class="status done">공사 완료</td>`
-          : `<td class="status" style="color:#0369a1;">진행중</td>`;
-
-        return `<tr>
-          <td class="num">${idx + 1}</td>
-          <td class="project">${yearTitle}</td>
-          <td class="client">${p.client || '-'}</td>
-          <td class="money">${m.total.toLocaleString()}원</td>
-          <td class="money">${m.deposit.toLocaleString()}원</td>
-          ${balanceCell}
-          ${statusCell}
-        </tr>`;
-      };
-
-      const tableHtml = (items, isCompleted) => {
-        if (!items.length) return `<div class="board-print-empty">해당 현장이 없습니다.</div>`;
-        return `<table class="board-print-table">
-          <thead>
-            <tr>
-              <th style="width:5%;">No.</th>
-              <th style="width:27%;">연도 / 현장명</th>
-              <th style="width:16%;">상호(고객)</th>
-              <th style="width:16%;">총 공사금액</th>
-              <th style="width:14%;">입금액</th>
-              <th style="width:14%;">${isCompleted ? '정산' : '미수 잔금'}</th>
-              <th style="width:8%;">상태</th>
-            </tr>
-          </thead>
-          <tbody>${items.map((p, idx) => rowHtml(p, idx, isCompleted)).join('')}</tbody>
-        </table>`;
-      };
-
-      content.innerHTML = `
-        <div class="board-print-subtitle">공사 진행 상태에 따라 자동 분류 · 미완료 현장 잔금만 미수금으로 집계</div>
-
-        <div class="board-print-summary">
-          <div class="board-print-summary-card"><span class="label">전체 현장</span><span class="value">${projects.length}건</span></div>
-          <div class="board-print-summary-card"><span class="label">진행중 / 미완료</span><span class="value">${ongoing.length}건</span></div>
-          <div class="board-print-summary-card"><span class="label">공사 완료</span><span class="value">${completed.length}건</span></div>
-          <div class="board-print-summary-card balance"><span class="label">미완료 잔금 합계</span><span class="value">${outstandingTotal.toLocaleString()}원</span></div>
-        </div>
-
-        <div class="board-print-section">
-          <div class="board-print-section-title">
-            <span>진행중 · 미완료 현장</span>
-            <span>미수 잔금 합계 ${outstandingTotal.toLocaleString()}원</span>
-          </div>
-          ${tableHtml(ongoing, false)}
-        </div>
-
-        <div class="board-print-section">
-          <div class="board-print-section-title completed">
-            <span>공사 완료 현장</span>
-            <span>${completed.length}건</span>
-          </div>
-          ${tableHtml(completed, true)}
-        </div>
-
-        <div class="board-print-footer">출력일시 ${printedAt} · 광진유한회사 현장 공정 관리 보드</div>
-      `;
-
-      modal.classList.remove('hidden');
-      window.print();
-      modal.classList.add('hidden');
+      const modal = document.getElementById('print-table-modal'); const title = document.getElementById('print-table-title'); const content = document.getElementById('print-table-content');
+      title.innerText = "[광진유한회사] 현장 공정 관리 보드 내역";
+      let html = `<table class="w-full text-left border-collapse border border-slate-300 text-xs"><thead><tr class="bg-slate-100"><th class="border p-2">연도/현장명</th><th class="border p-2">상호(고객)</th><th class="border p-2">총 공사금액</th><th class="border p-2">입금액</th><th class="border p-2">잔금</th><th class="border p-2">상태</th></tr></thead><tbody>`;
+      appData.projects.forEach(p => {
+        const tot = (p.totalAmount || 0) + (p.extraAmount || 0); const dep = p.depositAmount || 0; const bal = tot - dep;
+        html += `<tr><td class="border p-2 font-bold">[${p.year || '-'}] ${p.title}</td><td class="border p-2">${p.client}</td><td class="border p-2">${tot.toLocaleString()}원</td><td class="border p-2 text-emerald-600">${dep.toLocaleString()}원</td><td class="border p-2 text-rose-600 font-bold">${bal.toLocaleString()}원</td><td class="border p-2">${p.isCompleted ? '완료' : '진행중'}</td></tr>`;
+      });
+      html += `</tbody></table>`; content.innerHTML = html; modal.classList.remove('hidden'); window.print(); modal.classList.add('hidden');
     }
 
     function printTaxList() {
