@@ -683,6 +683,12 @@
       <div class="flex justify-between items-center mb-4 border-b pb-3"><h3 class="text-lg font-black">발행 상세 내역</h3><button onclick="closeTaxInvoiceDetailModal()"><i data-lucide="x" class="w-5 h-5 text-slate-400"></i></button></div>
       <div class="space-y-3 text-sm">
         <div><span class="text-xs font-bold text-slate-500">공사명</span><div id="tax-det-title" class="font-bold"></div></div>
+        <div class="bg-skybrand-50/50 p-3 rounded-xl border border-skybrand-100 text-xs space-y-1">
+          <div class="font-black text-skybrand-700 mb-1">발주처</div>
+          <div class="flex justify-between gap-3"><span class="text-slate-500">성명</span><span id="tax-det-owner" class="font-bold text-right"></span></div>
+          <div class="flex justify-between gap-3"><span class="text-slate-500">연락처</span><span id="tax-det-owner-phone" class="font-bold text-right"></span></div>
+          <div class="flex justify-between gap-3"><span class="text-slate-500">이메일</span><span id="tax-det-owner-email" class="font-bold text-right break-all"></span></div>
+        </div>
         <div class="bg-slate-50 p-3 rounded-xl border space-y-1 text-xs">
           <div class="flex justify-between"><span>공급가액</span><span id="tax-det-supply" class="font-bold"></span></div>
           <div class="flex justify-between"><span>세액</span><span id="tax-det-vat" class="font-bold"></span></div>
@@ -788,6 +794,27 @@
           <div class="flex flex-col justify-center items-end p-6 bg-rose-50/50 rounded-2xl border border-rose-100 min-w-0">
             <span class="text-sm font-bold text-rose-500 mb-2 w-full text-right whitespace-nowrap">금회발행 공급가액</span>
             <div id="pdf-hero-supply" class="text-3xl sm:text-4xl font-black text-rose-600 tracking-tighter whitespace-nowrap overflow-hidden w-full text-right" style="text-overflow: clip;">0 원</div>
+          </div>
+        </div>
+
+        <div class="mb-8 bg-skybrand-50/40 border border-skybrand-200 rounded-2xl p-5">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-base font-black text-skybrand-900 border-l-4 border-skybrand-500 pl-3">발주처 정보</h3>
+            <span class="text-[11px] font-bold text-skybrand-600">ORDERER INFORMATION</span>
+          </div>
+          <div class="grid grid-cols-3 gap-4 text-sm">
+            <div class="bg-white rounded-xl border border-skybrand-100 p-3">
+              <span class="block text-[11px] font-bold text-slate-400 mb-1">성명</span>
+              <div id="pdf-owner-name" class="font-black text-slate-800 break-keep">-</div>
+            </div>
+            <div class="bg-white rounded-xl border border-skybrand-100 p-3">
+              <span class="block text-[11px] font-bold text-slate-400 mb-1">연락처</span>
+              <div id="pdf-owner-phone" class="font-bold text-slate-700 break-all">-</div>
+            </div>
+            <div class="bg-white rounded-xl border border-skybrand-100 p-3">
+              <span class="block text-[11px] font-bold text-slate-400 mb-1">이메일</span>
+              <div id="pdf-owner-email" class="font-bold text-slate-700 break-all">-</div>
+            </div>
           </div>
         </div>
 
@@ -1678,9 +1705,9 @@
     function printTaxList() {
       const modal = document.getElementById('print-table-modal'); const title = document.getElementById('print-table-title'); const content = document.getElementById('print-table-content');
       title.innerText = "[광진유한회사] 세금계산서 발행 내역";
-      let html = `<table class="w-full text-left border-collapse border border-slate-300 text-xs"><thead><tr class="bg-slate-100"><th class="border p-2">발행일시</th><th class="border p-2">공사명</th><th class="border p-2">공급받는자</th><th class="border p-2">합계금액</th></tr></thead><tbody>`;
+      let html = `<table class="w-full text-left border-collapse border border-slate-300 text-[11px]"><thead><tr class="bg-slate-100"><th class="border p-2">발행일시</th><th class="border p-2">공사명</th><th class="border p-2">공급받는자</th><th class="border p-2">발주처</th><th class="border p-2">발주처 연락처</th><th class="border p-2 text-right">합계금액</th></tr></thead><tbody>`;
       appData.taxInvoices.forEach(inv => {
-        html += `<tr><td class="border p-2">${inv.date}</td><td class="border p-2 font-bold">${inv.title}</td><td class="border p-2">${inv.client}</td><td class="border p-2 font-bold">${(inv.grandTotal || 0).toLocaleString()}원</td></tr>`;
+        html += `<tr><td class="border p-2">${inv.date}</td><td class="border p-2 font-bold">${inv.title}</td><td class="border p-2">${inv.client}</td><td class="border p-2">${inv.owner || '-'}</td><td class="border p-2">${inv.phone || '-'}</td><td class="border p-2 font-bold text-right">${(inv.grandTotal || 0).toLocaleString()}원</td></tr>`;
       });
       html += `</tbody></table>`; content.innerHTML = html; modal.classList.remove('hidden'); window.print(); modal.classList.add('hidden');
     }
@@ -2259,6 +2286,9 @@
       document.getElementById('pdf-title').innerText = proj.title || '-'; 
       document.getElementById('pdf-client-name').innerText = proj.client || '고객명 미상';
       document.getElementById('pdf-client-bizno').innerText = proj.clientBizNo ? `사업자번호: ${proj.clientBizNo}` : '사업자번호 미입력';
+      document.getElementById('pdf-owner-name').innerText = proj.owner || '-';
+      document.getElementById('pdf-owner-phone').innerText = proj.phone || '-';
+      document.getElementById('pdf-owner-email').innerText = proj.ownerEmail || '-';
       
       const totCost = (proj.totalAmount || 0) + (proj.extraAmount || 0);
       const dep = proj.depositAmount || 0;
@@ -2289,7 +2319,20 @@
         contractContainer.appendChild(pageDiv);
       });
       
-      appData.taxInvoices.unshift({ id: Date.now(), title: proj.title, client: proj.client, grandTotal: s+v, date: new Date().toLocaleString() });
+      appData.taxInvoices.unshift({
+        id: Date.now(),
+        title: proj.title,
+        client: proj.client,
+        clientBizNo: proj.clientBizNo || '',
+        owner: proj.owner || '',
+        phone: proj.phone || '',
+        ownerEmail: proj.ownerEmail || '',
+        supply: s,
+        vat: v,
+        bal: bal,
+        grandTotal: s + v,
+        date: new Date().toLocaleString()
+      });
       renderTaxInvoiceList(); triggerAutoSync(); 
       
       setTimeout(() => { window.print(); document.getElementById('pdf-export-modal').classList.add('hidden'); }, 500); 
@@ -2312,6 +2355,9 @@
     function openTaxInvoiceDetail(id) {
       const inv = appData.taxInvoices.find(i => i.id === id); if(!inv) return;
       document.getElementById('tax-det-title').innerText = inv.title;
+      document.getElementById('tax-det-owner').innerText = inv.owner || '-';
+      document.getElementById('tax-det-owner-phone').innerText = inv.phone || '-';
+      document.getElementById('tax-det-owner-email').innerText = inv.ownerEmail || '-';
       document.getElementById('tax-det-supply').innerText = (inv.supply || 0).toLocaleString() + ' 원';
       document.getElementById('tax-det-vat').innerText = (inv.vat || 0).toLocaleString() + ' 원';
       document.getElementById('tax-det-bal').innerText = (inv.bal || 0).toLocaleString() + ' 원';
