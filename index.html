@@ -575,11 +575,11 @@
               <h4 class="font-black text-sm text-slate-800">금액 정산 및 청구 내역</h4>
               <label class="flex items-center gap-1.5 cursor-pointer bg-skybrand-50 px-2.5 py-1.5 rounded-lg border border-skybrand-200 hover:bg-skybrand-100 transition-colors shadow-sm">
                 <input type="checkbox" id="det-vat-excluded" onchange="updateSettlementDisplayOnly()" class="w-4 h-4 rounded text-skybrand-600 focus:ring-skybrand-500 border-slate-300">
-                <span class="text-xs font-bold text-skybrand-800">입력 금액 부가세 별도 (저장 시 10% 자동가산)</span>
+                <span class="text-xs font-bold text-skybrand-800">부가세 별도 (기본 금액은 유지하고 최종 잔금에만 10% 포함)</span>
               </label>
             </div>
             <div class="bg-rose-50 px-3 py-1.5 rounded-lg border border-rose-100 flex items-center gap-2 shrink-0">
-              <span class="text-xs font-bold text-rose-500">현재 최종 잔금</span>
+              <span id="settle-balance-label" class="text-xs font-bold text-rose-500">현재 최종 잔금</span>
               <span id="settle-balance" class="font-black text-rose-600 text-lg">0 원</span>
             </div>
           </div>
@@ -2184,36 +2184,31 @@
     
     function updateSettlementDisplayOnly() {
       const isExcluded = document.getElementById('det-vat-excluded') ? document.getElementById('det-vat-excluded').checked : false;
-      const mul = isExcluded ? 1.1 : 1;
 
-      const tot = Math.floor(Number(document.getElementById('settle-total').value || 0) * mul); 
-      
+      // 기본 총 공사금액 / 추가금 / 입금액은 입력된 원금 그대로 유지한다.
+      const tot = Number(document.getElementById('settle-total').value || 0);
+
       let ext = 0;
-      tempExtraAmounts.forEach(i => ext += Math.floor((Number(i.amount) || 0) * mul));
+      tempExtraAmounts.forEach(i => ext += (Number(i.amount) || 0));
       if(document.getElementById('extra-sum-display')) document.getElementById('extra-sum-display').innerText = ext.toLocaleString() + ' 원';
 
       let dep = 0;
-      tempDepositAmounts.forEach(i => dep += Math.floor((Number(i.amount) || 0) * mul));
+      tempDepositAmounts.forEach(i => dep += (Number(i.amount) || 0));
       if(document.getElementById('deposit-sum-display')) document.getElementById('deposit-sum-display').innerText = dep.toLocaleString() + ' 원';
 
-      document.getElementById('settle-balance').innerText = ((tot + ext) - dep).toLocaleString() + ' 원';
+      // 부가세 별도 체크는 데이터 값을 변경하지 않고 최종 잔금 표시값에만 10%를 반영한다.
+      const baseBalance = (tot + ext) - dep;
+      const displayBalance = isExcluded ? Math.floor(baseBalance * 1.1) : baseBalance;
+      document.getElementById('settle-balance').innerText = displayBalance.toLocaleString() + ' 원';
+
+      const balanceLabel = document.getElementById('settle-balance-label');
+      if (balanceLabel) balanceLabel.innerText = isExcluded ? '현재 최종 잔금 (부가세 포함)' : '현재 최종 잔금';
     }
 
     function saveProjectDetail(silent = false) {
       const p = appData.projects.find(p => p.id === activeDetailProjectId); if(!p) return;
-      
-      const isExcluded = document.getElementById('det-vat-excluded') ? document.getElementById('det-vat-excluded').checked : false;
-      if (isExcluded) {
-        document.getElementById('settle-total').value = Math.floor(Number(document.getElementById('settle-total').value || 0) * 1.1);
-        tempExtraAmounts.forEach(item => { if (item.amount) item.amount = Math.floor(Number(item.amount) * 1.1); });
-        tempDepositAmounts.forEach(item => { if (item.amount) item.amount = Math.floor(Number(item.amount) * 1.1); });
-        
-        document.getElementById('det-vat-excluded').checked = false;
-        renderExtraAmountRows();
-        renderDepositAmountRows();
-        updateSettlementDisplayOnly();
-      }
 
+      // 부가세 별도 체크 여부와 관계없이 기본 공사금액/추가금/입금액 원본을 그대로 저장한다.
       p.title = document.getElementById('det-title').value.trim(); p.addr = document.getElementById('det-addr').value.trim(); 
       p.year = document.getElementById('det-year').value; p.isCompleted = document.getElementById('det-status-completed').checked; 
       p.category = document.getElementById('det-category').value; p.date = document.getElementById('det-date').value;
