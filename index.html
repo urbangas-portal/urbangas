@@ -1696,7 +1696,7 @@
       title.innerText = "[광진유한회사] 현장 공정 관리 보드 내역";
       let html = `<table class="w-full text-left border-collapse border border-slate-300 text-xs"><thead><tr class="bg-slate-100"><th class="border p-2">연도/현장명</th><th class="border p-2">상호(고객)</th><th class="border p-2">총 공사금액</th><th class="border p-2">입금액</th><th class="border p-2">잔금</th><th class="border p-2">상태</th></tr></thead><tbody>`;
       appData.projects.forEach(p => {
-        const tot = (p.totalAmount || 0) + (p.extraAmount || 0); const dep = p.depositAmount || 0; const bal = tot - dep;
+        const tot = (p.totalAmount || 0) + (p.extraAmount || 0); const dep = p.depositAmount || 0; const baseBal = tot - dep; const bal = p.vatExcluded ? Math.floor(baseBal * 1.1) : baseBal;
         html += `<tr><td class="border p-2 font-bold">[${p.year || '-'}] ${p.title}</td><td class="border p-2">${p.client}</td><td class="border p-2">${tot.toLocaleString()}원</td><td class="border p-2 text-emerald-600">${dep.toLocaleString()}원</td><td class="border p-2 text-rose-600 font-bold">${bal.toLocaleString()}원</td><td class="border p-2">${p.isCompleted ? '완료' : '진행중'}</td></tr>`;
       });
       html += `</tbody></table>`; content.innerHTML = html; modal.classList.remove('hidden'); window.print(); modal.classList.add('hidden');
@@ -2158,7 +2158,7 @@
       const proj = appData.projects.find(p => p.id === String(id)); if(!proj) return; activeDetailProjectId = proj.id;
       
       const vatCheckbox = document.getElementById('det-vat-excluded');
-      if(vatCheckbox) vatCheckbox.checked = false;
+      if(vatCheckbox) vatCheckbox.checked = !!proj.vatExcluded;
 
       document.getElementById('det-title').value = proj.title || ''; document.getElementById('det-addr').value = proj.addr || '';
       document.getElementById('det-year').value = proj.year || new Date().getFullYear(); 
@@ -2216,7 +2216,8 @@
       p.clientPhone = document.getElementById('det-client-phone').value.trim(); p.clientEmail = document.getElementById('det-client-email').value.trim();
       p.owner = document.getElementById('det-owner').value.trim(); p.phone = document.getElementById('det-owner-phone').value.trim(); p.ownerEmail = document.getElementById('det-owner-email').value.trim();
       
-      p.totalAmount = Number(document.getElementById('settle-total').value || 0); 
+      p.totalAmount = Number(document.getElementById('settle-total').value || 0);
+      p.vatExcluded = document.getElementById('det-vat-excluded') ? document.getElementById('det-vat-excluded').checked : false;
       p.extraAmountsList = [...tempExtraAmounts]; p.depositAmountsList = [...tempDepositAmounts];
       p.extraAmount = tempExtraAmounts.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
       p.depositAmount = tempDepositAmounts.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
@@ -2239,7 +2240,8 @@
           if (!titleMatch && !clientMatch) return;
         }
 
-        const bal = (proj.totalAmount + (proj.extraAmount||0)) - (proj.depositAmount||0); 
+        const baseBal = (proj.totalAmount + (proj.extraAmount||0)) - (proj.depositAmount||0);
+        const bal = proj.vatExcluded ? Math.floor(baseBal * 1.1) : baseBal;
         totalBal += bal;
 
         const yearStr = proj.year ? `[${proj.year}] ` : '';
@@ -2261,7 +2263,8 @@
       
       const totCost = (proj.totalAmount || 0) + (proj.extraAmount || 0);
       const dep = proj.depositAmount || 0;
-      const bal = totCost - dep;
+      const baseBal = totCost - dep;
+      const bal = proj.vatExcluded ? Math.floor(baseBal * 1.1) : baseBal;
 
       document.getElementById('prompt-disp-total').innerText = totCost.toLocaleString() + ' 원';
       document.getElementById('prompt-disp-deposit').innerText = dep.toLocaleString() + ' 원';
@@ -2287,7 +2290,8 @@
       
       const totCost = (proj.totalAmount || 0) + (proj.extraAmount || 0);
       const dep = proj.depositAmount || 0;
-      const bal = totCost - dep;
+      const baseBal = totCost - dep;
+      const bal = proj.vatExcluded ? Math.floor(baseBal * 1.1) : baseBal;
 
       document.getElementById('pdf-total-cost').innerText = totCost.toLocaleString() + ' 원';
       document.getElementById('pdf-deposit').innerText = dep.toLocaleString() + ' 원';
